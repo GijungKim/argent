@@ -162,6 +162,7 @@ if (cmd === "linger-grouped") {
   process.stdout.write("OK-linger");
   return;
 }
+if (cmd === "sig") process.kill(process.pid, "SIGTERM");
 process.stdout.write("OK-" + cmd);
 `,
     { mode: 0o755 }
@@ -452,6 +453,10 @@ describe("runVega timeout (real subprocess)", () => {
     expect(err).toBeInstanceOf(Error);
     expect((err as Error).message).toMatch(/device offline/);
     expect(getFailureSignal(err)?.error_kind).toBe("subprocess");
+  });
+
+  it("classifies a signal death it did not cause as `subprocess`", async () => {
+    expect(await runVega(["sig"]).catch((e) => getFailureSignal(e)?.error_kind)).toBe("subprocess");
   });
 
   it("rejects + reaps when output exceeds the cap, classified as `subprocess`", async () => {
