@@ -152,6 +152,26 @@ describe("a MoQ session whose transport died", () => {
     expect(unhandled).toEqual([]);
   });
 
+  // The fake's `sendControl` resolves on a disposed session, as the SDK's does.
+  it.each([
+    ["ended", () => session().killTransport()],
+    ["failed", () => session().failTransport()],
+  ])("refuses a send once its transport %s", async (_, kill) => {
+    const client = await openMoqClient("remote:AAAA");
+    kill();
+    await session().closed.catch(() => {});
+    await new Promise((resolve) => setImmediate(resolve));
+
+    await expect(client.sendControl(new Uint8Array([1]))).rejects.toThrow(/session is closed/i);
+  });
+
+  it("refuses a send after close()", async () => {
+    const client = await openMoqClient("remote:AAAA");
+    await client.close();
+
+    await expect(client.sendControl(new Uint8Array([1]))).rejects.toThrow(/session is closed/i);
+  });
+
   it("leaves a live session alone", async () => {
     const client = await openMoqClient("remote:AAAA");
     await new Promise((resolve) => setImmediate(resolve));
