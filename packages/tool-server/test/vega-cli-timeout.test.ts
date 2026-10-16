@@ -99,7 +99,7 @@ if (cmd === "hang") {
   // it — only the descendant sweep does. It also inherits our stdout, reproducing the
   // pipe-held-open freeze. \`secs\` is a per-test sentinel so pgrep finds strays
   // unambiguously.
-  const worker = spawn("sleep", [secs], { detached: true, stdio: ["ignore", "inherit", "ignore"] });
+  const worker = spawn("sh", ["-c", "trap '' TERM; exec sleep " + secs], { detached: true, stdio: ["ignore", "inherit", "ignore"] });
   worker.unref();
   // The launcher itself also hangs so it stays alive to be timed out and snapshotted.
   // This sleep is a descendant, so the sweep reaps it before the group kill runs.
@@ -217,7 +217,7 @@ function cmdlinePattern(target: string): string {
 
 function sweep(): void {
   try {
-    execSync(`pkill -f '${cmdlinePattern(`${SENTINEL_PREFIX}[0-9]`)}' || true`);
+    execSync(`pkill -9 -f '${cmdlinePattern(`${SENTINEL_PREFIX}[0-9]`)}' || true`);
   } catch {
     // `|| true` maps every `pkill` exit - no-match, or `pkill` itself missing - to 0, so
     // only the shell itself failing reaches here - fork EAGAIN under load, the same mode
