@@ -1,6 +1,6 @@
 /**
  * A cloud transport dies under an open session whenever the machine is
- * released. The SDK only refuses work on a session someone explicitly closed,
+ * released. The SDK only refuses a screenshot on a session someone explicitly closed,
  * so the first screenshot after that subscribed a track on a dead
  * WebTransport - and `@moq/net` runs a subscribe detached, so the
  * `InvalidStateError` it threw was an unhandled rejection with no handler to
@@ -27,7 +27,7 @@ interface FakeSessionShape {
 }
 
 vi.mock("@swmansion/argent-cloud-sdk", () => {
-  /** Mirrors the real `MoqDeviceSession` on the two points that matter. */
+  /** Mirrors the real `MoqDeviceSession` on the points that matter. */
   class FakeSession implements FakeSessionShape {
     closed: Promise<void>;
     disposed = false;
