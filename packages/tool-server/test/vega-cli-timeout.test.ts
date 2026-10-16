@@ -369,11 +369,14 @@ describe("runVega timeout (real subprocess)", () => {
     expect(await waitForClear(SENTINEL_REAP)).toBe(0);
   });
 
-  it("returns normally when the CLI responds before the deadline", async () => {
+  it("returns normally, leaving no timer armed, when the CLI responds before the deadline", async () => {
+    const timeouts = () => process.getActiveResourcesInfo().filter((k) => k === "Timeout").length;
+    const before = timeouts();
     await expect(runVega(["go"], { timeoutMs: 5_000 })).resolves.toEqual({
       stdout: "OK-go",
       stderr: "",
     });
+    expect(timeouts()).toBe(before);
   });
 
   it("resolves a clean exit even when a worker holds the stdout pipe open (delayed close)", async () => {
