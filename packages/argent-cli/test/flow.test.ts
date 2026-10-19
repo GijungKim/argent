@@ -19,12 +19,10 @@ const materializeArtifactsMock = vi.hoisted(() =>
   vi.fn(async (data: unknown) => ({ result: data, images: [] }))
 );
 const getResolvedToolsUrlMock = vi.hoisted(() =>
-  vi.fn(
-    async (): Promise<ResolvedToolsUrl> => ({
-      url: null,
-      source: "none",
-    })
-  )
+  vi.fn(async (): Promise<ResolvedToolsUrl> => ({
+    url: null,
+    source: "none",
+  }))
 );
 
 vi.mock("@argent/tools-client", async (importOriginal) => ({
@@ -200,6 +198,13 @@ describe("parseRunArgs", () => {
     expect(() => parseRunArgs(["checkout.yaml", "--platform", "--update-baselines"])).toThrow(
       "--platform requires a value"
     );
+  });
+
+  it("throws on a separately supplied empty value, like the --flag= form", () => {
+    for (const flag of ["--device", "--platform", "--output"]) {
+      expect(() => parseRunArgs(["checkout.yaml", flag, ""])).toThrow(FlagParseException);
+      expect(() => parseRunArgs(["checkout.yaml", flag, ""])).toThrow(`${flag} requires a value`);
+    }
   });
 
   it("accepts the --flag=value form for every value-taking flag", () => {

@@ -15,13 +15,13 @@ const zodSchema = z
     project_root: z
       .string()
       .describe(
-        "Absolute path to the calling agent's project root — the cwd it is working in. With name, the saved flow is read from `.argent/flows/<name>.yaml` under this root; with flow_path, the prerequisite is read from that YAML instead, so pass the agent's cwd."
+        "Absolute path to the calling agent's project root: the cwd it is working in. With name, the saved flow is read from `.argent/flows/<name>.yaml` under this root; with flow_path, the prerequisite is read from that YAML instead, so pass the agent's cwd."
       ),
     flow_file: z
       .string()
       .optional()
       .describe(
-        "Path to the flow .yaml as readable by the tool-server. Internal — the argent client derives it from project_root and name automatically; leave unset."
+        "Path to the flow .yaml as readable by the tool-server. Internal: the argent client derives it from project_root and name automatically; leave unset."
       ),
     flow_path: z
       .string()
@@ -77,7 +77,7 @@ export const flowReadPrerequisiteTool: ToolDefinition<
     failedMsg: ({ failureSignal }) =>
       `Failed to read flow prerequisite: ${failureSignal.error_code}`,
   },
-  description: `Read the execution prerequisite of a flow without running it — a saved flow from the .argent/flows/ directory, or an explicit boundary-managed flow_path.
+  description: `Read the execution prerequisite of a flow without running it: a saved flow from the .argent/flows/ directory, or an explicit boundary-managed flow_path.
 Returns { flow, executionPrerequisite }: the logical name, plus the precondition its author recorded
 verbatim. Empty when none was declared, which is always so for a self-contained scenario: one opening
 on a launch may declare no prerequisite, because it builds its own start state.

@@ -240,6 +240,10 @@ export function parseRunArgs(argv: string[]): {
     json: options.json === true,
     jsonStream: options["json-stream"] === true,
   };
+  // Their reads are truthy-guarded, so "" would be silently dropped.
+  for (const name of ["device", "platform", "output"] as const) {
+    if (options[name] === "") throw new FlagParseException(`--${name} requires a value`);
+  }
   if (positionals[0] !== undefined) out.flowRef = positionals[0];
   if (options.device !== undefined) out.device = options.device as string;
   if (options.platform !== undefined) out.platform = options.platform as string;
@@ -565,9 +569,7 @@ async function readExportMarker(dir: string): Promise<string | null | undefined>
  * a second, atomic step (takeExportDir) and only its verdict is binding.
  */
 type ExportDirClaim =
-  | { state: "free" }
-  | { state: "mine" }
-  | { state: "foreign"; owner: string | null };
+  { state: "free" } | { state: "mine" } | { state: "foreign"; owner: string | null };
 
 async function classifyExportDir(dir: string, flowPath: string): Promise<ExportDirClaim> {
   let owner = await readExportMarker(dir); // null = has content but proves no owner

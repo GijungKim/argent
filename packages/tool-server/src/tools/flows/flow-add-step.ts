@@ -69,11 +69,11 @@ import {
 const zodSchema = z.object({
   name: z
     .string()
-    .describe("Name of the flow being recorded — the one passed to flow-start-recording."),
+    .describe("Name of the flow being recorded: the one passed to flow-start-recording."),
   project_root: z
     .string()
     .describe(
-      "Absolute path to the project root of the flow being recorded — the same value passed to flow-start-recording. Together with `name` it identifies which recording this step belongs to."
+      "Absolute path to the project root of the flow being recorded: the same value passed to flow-start-recording. Together with `name` it identifies which recording this step belongs to."
     ),
   command: z
     .string()
@@ -761,8 +761,8 @@ const DIRECTIVE_COMMAND_HINTS: Record<string, DirectiveHint> = {
     tool: "restart-app",
     rewritten: true,
     rewriteCondition:
-      "when it carries only the bundle id (a call with an extra arg, e.g. an Android `activity`, " +
-      "is kept as a raw `tool: restart-app` step to convert during polish)",
+      "when it carries only the bundle id, or `launchArgs` on iOS (any other extra arg, e.g. an " +
+      "Android `activity`, is kept as a raw `tool: restart-app` step, since no `launch:` form carries it)",
   },
   run: {
     tool: "flow-execute",

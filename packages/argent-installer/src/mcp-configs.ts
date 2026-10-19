@@ -51,7 +51,7 @@ export interface McpServerEntry {
 // Argent config or client state outside the scope init just wrote that can keep
 // that entry from taking effect. Adapters only report; init-stale-config.ts
 // decides removal vs. warning.
-export interface ShadowingConfigFinding {
+interface ShadowingConfigFinding {
   /** Human-readable location, e.g. `~/.claude.json (project-local scope)`. */
   location: string;
   /** One-line consequence for the user, e.g. `takes precedence over .mcp.json`. */
@@ -1132,8 +1132,7 @@ const zedAdapter: McpConfigAdapter = {
     if (!fs.existsSync(settingsPath)) return;
     const config = readJsonc(settingsPath);
     const perms = (config.agent as Record<string, unknown>)?.tool_permissions as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     if (!perms || perms.default !== "allow") return;
     editJsoncFile(settingsPath, ["agent", "tool_permissions", "default"], "confirm");
   },
