@@ -135,6 +135,8 @@ Argent supports physical iPhones; physical iPads are not supported yet. `list-de
 | `profiler-cpu-query`              | Query Hermes CPU profile data with targeted modes                            |
 | `profiler-stack-query`            | Query native trace data for iterative native investigation                   |
 
+`react-profiler-start` and `native-profiler-start` pause the simulator-server video stream of the device and return `streamPaused`. When the stream does not pause, `streamNote` gives the reason, for example an iOS simulator or an older simulator-server. The stream starts again when the last profiler on the device stops, and `react-profiler-stop` and `native-profiler-stop` then return `streamRestored: true`. A stream also starts again after 10 minutes, at the native recording cap, and when the profiler session ends. While a profiler records on a device, interaction tools on that device return no automatic screenshot or element tree. Call `screenshot` or `describe` to see the screen.
+
 ## Flows
 
 | Tool                     | Description                                                       |

@@ -25,7 +25,7 @@ Argent has two profilers. The agent can run one profiler or both profilers at th
 | Native   | iOS          | Xcode Instruments         | Native CPU time, UI hangs, memory leaks                           |
 | Native   | Android      | Perfetto                  | Native CPU time, UI hangs with the jank reason, GC, memory growth |
 
-The React profiler connects to the Hermes runtime of the app through the debugger. Thus the app must run in a debuggable build. The native profiler attaches to the process of the app on the device. The native profiler does not need a special build.
+The React profiler connects to the Hermes runtime of the app through the debugger. Thus the app must run in a debuggable build. The native profiler attaches to the process of the app on the device. On iOS, the native profiler does not need a special build. On Android, the app must be a debug build or be profileable. Without this, the native profile has no CPU call stacks. To make a release build profileable, add `<profileable android:shell="true"/>` under `<application>` in `AndroidManifest.xml`.
 
 ## A profiling session
 
@@ -35,6 +35,8 @@ A profiling session has four steps. The agent does each step with one tool.
 2. You or the agent use the app. The agent can tap, swipe and type in the app with the [interaction tools](/docs/features/interacting-with-apps). This is the only part of the session that the profile contains.
 3. The agent stops the profiler. Argent collects the data and writes it to disk.
 4. The agent analyzes the data. Argent returns a report in Markdown.
+
+While a profiler records, Argent pauses the video stream of the device. The stream encoding uses CPU on the device and makes the app look faster than it is. Argent also stops the screenshot and the element tree that it adds after each interaction. The agent can still take a screenshot or read the element tree when it needs to see the screen. When the last profiler stops, Argent starts the stream again. An Android emulator or device can pause the stream. An iOS simulator cannot pause it.
 
 When the agent runs both profilers, the agent can also ask for a combined report. Argent aligns the native hangs with the React commits on the wall clock. Thus the report tells you which React commit caused which hang.
 

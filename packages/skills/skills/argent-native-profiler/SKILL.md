@@ -57,6 +57,7 @@ You do not need to derive `app_process` manually; just make sure the app is laun
 
 Call `native-profiler-start` with `device_id` (iOS UDID or Android serial). The tool auto-detects the running app and saves the trace to `/tmp/argent-profiler-cwd/` with a timestamped filename.
 Let the user interact with the app or drive interaction via simulator tools (see `argent-device-interact` skill).
+While a profiler records, the device's video stream and the automatic screenshot and element tree after each interaction are paused; call `screenshot` or `describe` when you need to see the screen.
 
 ### Step 2: Stop and export
 
