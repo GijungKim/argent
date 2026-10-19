@@ -219,7 +219,6 @@ export function startSimulatorWatcher(registry: Registry): {
       return;
     }
     consecutiveTimeouts = 0;
-    ticksToSkip = 0;
 
     /**
      * Before the init pass, so a granted claim re-resolves into attach mode on

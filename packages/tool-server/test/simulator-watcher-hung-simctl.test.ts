@@ -127,10 +127,11 @@ describe("simulator-watcher with a hung simctl", () => {
 
   it("waits for every device set, and backs off when any of them timed out", async () => {
     additionalSets.push(os.tmpdir());
-    let finishDefaultSet: (err: Error) => void = () => {};
+    // The default set fails fast, so its error comes first; the timeout must still win.
+    let finishExtraSet: (err: Error) => void = () => {};
     execSimctlMock.mockImplementation((args: string[]) => {
-      if (args.includes("--set")) return Promise.reject(new Error("exit 1"));
-      return new Promise<string>((_, reject) => (finishDefaultSet = reject));
+      if (!args.includes("--set")) return Promise.reject(new Error("exit 1"));
+      return new Promise<string>((_, reject) => (finishExtraSet = reject));
     });
 
     const { ready, stop } = startSimulatorWatcher(registry);
@@ -139,7 +140,7 @@ describe("simulator-watcher with a hung simctl", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(settled).toBe(false);
 
-    finishDefaultSet(new SimctlTimeoutError(["simctl", "list", "devices", "--json"], 10_000));
+    finishExtraSet(new SimctlTimeoutError(["simctl", "list", "devices", "--json"], 10_000));
     await ready;
     expect(stderrWrites.filter((w) => w.includes("xcodebuild -runFirstLaunch"))).toHaveLength(1);
     stop();
