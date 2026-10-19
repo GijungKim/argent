@@ -17,6 +17,7 @@ import type { ExportDiagnostics, IosExportKey } from "../../../utils/ios-profile
 import { requireArtifacts, type ArtifactHandle } from "../../../artifacts";
 import type { ArtifactKind, ArtifactStore } from "@argent/registry";
 import { metroDeviceIdParam } from "../../../utils/debugger/device-id-param";
+import { nativeProfilerGateOwner, releaseStreamGate } from "../../../utils/stream-gate";
 
 const zodSchema = z.object({
   device_id: metroDeviceIdParam(
@@ -50,7 +51,8 @@ interface AndroidStopArtifacts {
   warning?: string;
 }
 
-type StopResult = IosStopArtifacts | AndroidStopArtifacts;
+/** `streamRestored` only when this stop resumed a stream its start paused. */
+type StopResult = (IosStopArtifacts | AndroidStopArtifacts) & { streamRestored?: true };
 
 const capability = {
   apple: { simulator: true },
@@ -119,31 +121,48 @@ Fails if no active native-profiler-start session exists for the given device_id.
     const device = resolveDevice(params.device_id);
     assertSupported("native-profiler-stop", capability, device);
 
-    // Kept per branch rather than merged so the return type preserves the
-    // iOS/Android distinction: iOS always carries exportDiagnostics, Android
-    // never does. The artifact store is resolved only after a successful stop —
-    // the "no active session" error path never needs it.
-    if (api.platform === "ios") {
-      await ensureDeps(["xcrun"]);
-      const ios: IosStopResult = await stopNativeProfilerIos(api);
-      const artifacts = requireArtifacts(ctx);
-      const result: IosStopArtifacts = {
-        traceFile: await registerTrace(artifacts, ios.traceFile),
-        exportedFiles: await exportedFilesToArtifacts(artifacts, ios.exportedFiles),
-        exportDiagnostics: ios.exportDiagnostics,
-      };
-      if (ios.warning) result.warning = ios.warning;
-      return result;
-    }
-
-    await ensureDeps(["adb"]);
-    const android: AndroidStopResult = await stopNativeProfilerAndroid(api);
-    const artifacts = requireArtifacts(ctx);
-    const result: AndroidStopArtifacts = {
-      traceFile: await registerTrace(artifacts, android.traceFile),
-      exportedFiles: await exportedFilesToArtifacts(artifacts, android.exportedFiles),
+    // The stream resumes as soon as the capture has ended, before the export
+    // (seconds on iOS) or the trace pull, and on every path: a stop that fails
+    // still ends the recording. Later calls are no-ops.
+    let restored = false;
+    const restoreStream = async (): Promise<void> => {
+      const released = await releaseStreamGate(nativeProfilerGateOwner(device.id));
+      if (released?.streamRestored) restored = true;
     };
-    if (android.warning) result.warning = android.warning;
-    return result;
+    const withStream = <T extends object>(r: T): T & { streamRestored?: true } =>
+      restored ? { ...r, streamRestored: true } : r;
+
+    try {
+      // Kept per branch rather than merged so the return type preserves the
+      // iOS/Android distinction: iOS always carries exportDiagnostics, Android
+      // never does. The artifact store is resolved only after a successful stop —
+      // the "no active session" error path never needs it.
+      if (api.platform === "ios") {
+        await ensureDeps(["xcrun"]);
+        const ios: IosStopResult = await stopNativeProfilerIos(api, restoreStream);
+        await restoreStream();
+        const artifacts = requireArtifacts(ctx);
+        const result: IosStopArtifacts = {
+          traceFile: await registerTrace(artifacts, ios.traceFile),
+          exportedFiles: await exportedFilesToArtifacts(artifacts, ios.exportedFiles),
+          exportDiagnostics: ios.exportDiagnostics,
+        };
+        if (ios.warning) result.warning = ios.warning;
+        return withStream(result);
+      }
+
+      await ensureDeps(["adb"]);
+      const android: AndroidStopResult = await stopNativeProfilerAndroid(api, restoreStream);
+      await restoreStream();
+      const artifacts = requireArtifacts(ctx);
+      const result: AndroidStopArtifacts = {
+        traceFile: await registerTrace(artifacts, android.traceFile),
+        exportedFiles: await exportedFilesToArtifacts(artifacts, android.exportedFiles),
+      };
+      if (android.warning) result.warning = android.warning;
+      return withStream(result);
+    } finally {
+      await restoreStream();
+    }
   },
 };

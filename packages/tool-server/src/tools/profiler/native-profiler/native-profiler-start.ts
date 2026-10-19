@@ -10,6 +10,7 @@ import { ensureDeps } from "../../../utils/check-deps";
 import { startNativeProfilerIos } from "./platforms/ios";
 import { startNativeProfilerAndroid } from "./platforms/android";
 import { metroDeviceIdParam } from "../../../utils/debugger/device-id-param";
+import { acquireStreamGate, nativeProfilerGateOwner } from "../../../utils/stream-gate";
 
 const zodSchema = z.object({
   device_id: metroDeviceIdParam(
@@ -58,7 +59,13 @@ export { handleXctraceExit } from "./platforms/ios";
 
 export const nativeProfilerStartTool: ToolDefinition<
   z.infer<typeof zodSchema>,
-  { status: "recording"; pid: number; traceFile: string }
+  {
+    status: "recording";
+    pid: number;
+    traceFile: string;
+    streamPaused: boolean;
+    streamNote?: string;
+  }
 > = {
   id: "native-profiler-start",
   interaction: {
@@ -72,7 +79,7 @@ export const nativeProfilerStartTool: ToolDefinition<
 Auto-detects the running app process unless app_process is explicitly provided.
 After starting, let the user interact with the app, then call native-profiler-stop.
 Use when you want to capture native CPU, hang, and memory data for a running app.
-Returns { status, pid, traceFile } confirming the recording has started.
+Returns { status, pid, traceFile, streamPaused } confirming the recording has started.
 Fails if no app is running on the device, or the profiler cannot attach to the process.`,
   zodSchema,
   services: (params) => ({
@@ -85,11 +92,20 @@ Fails if no app is running on the device, or the profiler cannot attach to the p
 
     // Dispatch on the session's platform, not the udid shape: tests pair a
     // synthetic platform with a fake udid that fails the iOS-UDID regex.
+    let started: { status: "recording"; pid: number; traceFile: string };
     if (api.platform === "ios") {
       await ensureDeps(["xcrun"]);
-      return startNativeProfilerIos(api, params);
+      started = await startNativeProfilerIos(api, params);
+    } else {
+      await ensureDeps(["adb"]);
+      started = await startNativeProfilerAndroid(api, params);
     }
-    await ensureDeps(["adb"]);
-    return startNativeProfilerAndroid(api, params);
+    // Only after a successful start: a failed start must leave the stream alone.
+    const stream = await acquireStreamGate(device.id, nativeProfilerGateOwner(device.id));
+    return {
+      ...started,
+      streamPaused: stream.streamPaused,
+      ...(stream.reason ? { streamNote: stream.reason } : {}),
+    };
   },
 };

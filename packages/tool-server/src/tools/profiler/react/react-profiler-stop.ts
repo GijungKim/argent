@@ -20,6 +20,7 @@ import {
 } from "../../../utils/react-profiler/scripts";
 import { RN_ONLY_TOOL_CAPABILITY } from "../../debugger/debugger-service-ref";
 import { canonicalDeviceId } from "../../../utils/debugger/device-alias";
+import { reactProfilerGateOwner, releaseStreamGate } from "../../../utils/stream-gate";
 import { metroPort, metroPortField } from "../../../utils/debugger/metro-port";
 
 const zodSchema = z.object({
@@ -167,6 +168,32 @@ Fails if no active profiling session exists or the CDP connection was lost durin
     capability: RN_ONLY_TOOL_CAPABILITY,
     services: () => ({}),
     async execute(_services, params) {
+      // On every path: once stop is called, this run is over.
+      const owner = reactProfilerGateOwner(
+        metroPort(params),
+        canonicalDeviceId(params.device_id) ?? params.device_id
+      );
+      let restored = false;
+      const restoreStream = async (): Promise<void> => {
+        if ((await releaseStreamGate(owner))?.streamRestored) restored = true;
+      };
+      let response: Record<string, unknown>;
+      try {
+        response = await stopAndCollect(params, restoreStream);
+      } finally {
+        await restoreStream();
+      }
+      if (restored) response["streamRestored"] = true;
+      return response;
+    },
+  };
+
+  /** `restoreStream` runs once the in-app recording has stopped, before the session is disposed. */
+  async function stopAndCollect(
+    params: z.infer<typeof zodSchema>,
+    restoreStream: () => Promise<void>
+  ): Promise<Record<string, unknown>> {
+    {
       const psUrn = `${REACT_PROFILER_SESSION_NAMESPACE}:${metroPort(params)}:${canonicalDeviceId(params.device_id)}`;
       const snapshot = registry.getSnapshot();
       const entry = snapshot.services.get(psUrn);
@@ -275,6 +302,7 @@ Fails if no active profiling session exists or the CDP connection was lost durin
           }
         );
       }
+      await restoreStream();
       const stopReadRaw = stopReadStr.result?.value;
       if (!stopReadRaw) {
         throw new FailureError("No profiling data returned from runtime.", {
@@ -434,6 +462,6 @@ Fails if no active profiling session exists or the CDP connection was lost durin
       }
 
       return response;
-    },
-  };
+    }
+  }
 }

@@ -6,6 +6,7 @@ import {
   type ServiceEvents,
 } from "@argent/registry";
 import { assertExternalCapability } from "../utils/external-devices";
+import { reactProfilerGateOwner, releaseStreamGate } from "../utils/stream-gate";
 import type { CDPClient, ScriptInfo } from "../utils/debugger/cdp-client";
 import type { JsRuntimeDebuggerApi } from "./js-runtime-debugger";
 import {
@@ -211,6 +212,8 @@ export const reactProfilerSessionBlueprint: ServiceBlueprint<ReactProfilerSessio
         // disposes only this node, once per run.
         cdp.events.off("scriptParsed", onScriptParsed);
         cdp.events.off("disconnected", onDisconnected);
+        // A Metro reload, CDP loss or stop-all ends the run as surely as a stop.
+        void releaseStreamGate(reactProfilerGateOwner(state.port, state.deviceId));
         // `react-profiler-stop` stops the renderers and the sampler before
         // disposing; a dispose from `stop-all-simulator-servers` arrives
         // mid-run instead, leaving the in-app DevTools backend recording every

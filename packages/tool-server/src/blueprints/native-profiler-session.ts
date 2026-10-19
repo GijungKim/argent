@@ -14,6 +14,7 @@ import { waitForChildExit } from "../utils/profiler-shared/lifecycle";
 import { adbShell } from "../utils/adb";
 import { recordReapedSession } from "../utils/reaped-sessions";
 import { disposeWarmEngine } from "@argent/native-devtools-android";
+import { nativeProfilerGateOwner, releaseStreamGate } from "../utils/stream-gate";
 
 // Cross-platform session for the `native-profiler-*` tools: iOS drives an xctrace
 // child, Android an `adb shell perfetto` child, both behind the shared
@@ -234,6 +235,9 @@ export const nativeProfilerSessionBlueprint: ServiceBlueprint<
         // that start must fail rather than report a recording nothing can
         // reach. See {@link NativeProfilerSessionApi.disposed}.
         state.disposed = true;
+        // Fire-and-forget: teardown must not wait on a simulator-server that
+        // may be going down with it.
+        void releaseStreamGate(nativeProfilerGateOwner(state.deviceId));
         if (state.recordingTimeout) {
           clearTimeout(state.recordingTimeout);
           state.recordingTimeout = null;

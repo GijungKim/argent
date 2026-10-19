@@ -18,6 +18,7 @@ import {
 } from "../../../../utils/ios-profiler/render";
 import { RECORDING_CAP_MS } from "../../../../utils/profiler-shared/types";
 import { TraceProcessorUnavailableError } from "@argent/native-devtools-android";
+import { nativeProfilerGateOwner, releaseStreamGate } from "../../../../utils/stream-gate";
 
 interface AndroidStartParams {
   device_id: string;
@@ -122,6 +123,8 @@ export async function startNativeProfilerAndroid(
     api.profilingActive = false;
     api.recordingTimeout = null;
     api.recordingTimedOut = true;
+    // The capture is over; the stream need not wait for the stop call.
+    void releaseStreamGate(nativeProfilerGateOwner(api.deviceId));
   }, RECORDING_CAP_MS);
 
   return {
@@ -144,8 +147,10 @@ export interface AndroidStopResult {
  */
 export type AndroidExportKey = "pftrace";
 
+/** `onCaptureEnded`: see the iOS twin; runs once perfetto is gone, before the pull. */
 export async function stopNativeProfilerAndroid(
-  api: NativeProfilerSessionApi
+  api: NativeProfilerSessionApi,
+  onCaptureEnded?: () => Promise<void>
 ): Promise<AndroidStopResult> {
   const recoveringPartialTrace = api.recordingTimedOut || api.recordingExitedUnexpectedly;
   if (!api.profilingActive && !recoveringPartialTrace) {
@@ -202,6 +207,7 @@ export async function stopNativeProfilerAndroid(
       onDeviceTracePath: api.androidOnDeviceTracePath,
       hostTracePath: api.traceFile,
       recordingTimedOut: api.recordingTimedOut,
+      ...(onCaptureEnded ? { onCaptureEnded } : {}),
     });
   } finally {
     // Always return the session to a startable state, even when the `adb pull`

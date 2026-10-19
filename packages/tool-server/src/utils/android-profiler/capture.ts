@@ -270,6 +270,8 @@ interface StopPerfettoOptions {
   hostTracePath: string;
   /** True if the 10-min cap already fired and SIGTERM was already sent. */
   recordingTimedOut?: boolean;
+  /** Runs once the daemon is gone, before the pull. Errors are ignored. */
+  onCaptureEnded?: () => Promise<void>;
 }
 
 interface StopPerfettoResult {
@@ -347,6 +349,7 @@ export async function stopPerfetto(opts: StopPerfettoOptions): Promise<StopPerfe
       "Common causes: target app crashed, traced daemon restart, device hibernate.";
   }
 
+  await opts.onCaptureEnded?.().catch(() => {});
   await runAdb(["-s", opts.serial, "pull", opts.onDeviceTracePath, opts.hostTracePath]);
   await adbShell(opts.serial, `rm -f ${opts.onDeviceTracePath}`).catch(() => {});
 

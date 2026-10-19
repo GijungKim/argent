@@ -31,6 +31,7 @@ import {
   type ExternalDevice,
 } from "../utils/external-devices";
 import { simctlPbcopy } from "../utils/sim-remote";
+import { attachStreamGateServer, detachStreamGateServer } from "../utils/stream-gate";
 
 export const SIMULATOR_SERVER_NAMESPACE = "SimulatorServer";
 
@@ -205,9 +206,11 @@ async function buildRemoteInstance(
     transport,
   };
 
+  attachStreamGateServer(device.id, api, "a remote simulator has no stream control");
   return {
     api,
     dispose: async () => {
+      detachStreamGateServer(device.id, api);
       await moq.close();
     },
     events,
@@ -262,10 +265,14 @@ async function buildAttachedInstance(
   // A provider's build without the display route answers 404 and the device
   // stays single-panel; the route itself is on the parity allow-list.
   await attachFoldableDisplay(api, device);
+  // A provider's server is shared with its other clients: never pause it.
+  attachStreamGateServer(device.id, api, "an external provider's simulator-server is left alone");
 
   return {
     api,
-    dispose: async () => {},
+    dispose: async () => {
+      detachStreamGateServer(device.id, api);
+    },
     events: new TypedEventEmitter<ServiceEvents>(),
   };
 }
@@ -604,6 +611,7 @@ export const simulatorServerBlueprint: ServiceBlueprint<SimulatorServerApi, Devi
         },
       },
       dispose: async () => {
+        detachStreamGateServer(device.id, instance.api);
         proc.kill();
       },
       events,
@@ -612,6 +620,9 @@ export const simulatorServerBlueprint: ServiceBlueprint<SimulatorServerApi, Devi
     // The first command a foldable gets must already name its live panel, so
     // the probe runs before the instance is handed out.
     await attachFoldableDisplay(instance.api, device);
+    // A profiler that started before this server existed is waiting to pause it.
+    attachStreamGateServer(device.id, instance.api);
+    proc.on("exit", () => detachStreamGateServer(device.id, instance.api));
 
     return instance;
   },

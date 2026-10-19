@@ -20,6 +20,7 @@ import { probeArgentToolServer } from "./utils/probe-argent-tool-server";
 import { startSimulatorWatcher } from "./utils/simulator-watcher";
 import { startUpdateChecker } from "./utils/update-checker";
 import { createPreviewWindowManager } from "./utils/preview-window";
+import { clearPreviewViewers } from "./utils/stream-gate";
 import {
   variantProposalStore,
   type RoundCompletedStats,
@@ -242,6 +243,7 @@ export function start(): void {
     pendingCloseTimer = setTimeout(() => {
       pendingCloseTimer = null;
       previewWindow.requestClose();
+      clearPreviewViewers();
     }, PREVIEW_CLOSE_DELAY_MS);
   };
   // In a CLI session the window opens on session begin, not on a parked await —
@@ -253,6 +255,7 @@ export function start(): void {
       if (url) previewWindow.ensureOpen(url);
     } else {
       previewWindow.requestClose();
+      clearPreviewViewers();
       // Only simulators Lens booted itself (the picker's "boot it first" action)
       // are marked owned; devices the user already had running are left alone.
       // Fire-and-forget so teardown cannot block the session-end response.

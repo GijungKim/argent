@@ -1,5 +1,6 @@
 import { spawn, execFileSync, type ChildProcess } from "child_process";
 import { FAILURE_CODES, FailureError, subprocessFailureMetadata } from "@argent/registry";
+import { nativeProfilerGateOwner, releaseStreamGate } from "../../../../utils/stream-gate";
 import { promises as fs } from "fs";
 import { existsSync } from "node:fs";
 import * as path from "path";
@@ -442,6 +443,7 @@ export function handleXctraceExit(
     api.recordingExitedUnexpectedly = true;
   }
   api.lastExitInfo = { code, signal };
+  void releaseStreamGate(nativeProfilerGateOwner(api.deviceId));
 }
 
 /**
@@ -802,6 +804,8 @@ export async function startNativeProfilerIos(
     api.captureProcess = null;
     api.recordingTimeout = null;
     api.recordingTimedOut = true;
+    // The capture is over; the stream need not wait for the stop call.
+    void releaseStreamGate(nativeProfilerGateOwner(api.deviceId));
   }, RECORDING_CAP_MS);
 
   xctraceProcess.on("exit", (code, signal) => handleXctraceExit(api, code, signal));
@@ -820,7 +824,14 @@ export interface IosStopResult {
   warning?: string;
 }
 
-export async function stopNativeProfilerIos(api: NativeProfilerSessionApi): Promise<IosStopResult> {
+/**
+ * `onCaptureEnded` runs once xctrace has exited, before the slow export pass:
+ * it is when native-profiler-stop resumes the video stream.
+ */
+export async function stopNativeProfilerIos(
+  api: NativeProfilerSessionApi,
+  onCaptureEnded?: () => Promise<void>
+): Promise<IosStopResult> {
   if ((api.recordingTimedOut || api.recordingExitedUnexpectedly) && api.traceFile) {
     const traceFile = api.traceFile;
     const wasTimeout = api.recordingTimedOut;
@@ -890,6 +901,7 @@ export async function stopNativeProfilerIos(api: NativeProfilerSessionApi): Prom
   api.captureProcess = null;
   api.recordingExitedUnexpectedly = false;
   api.lastExitInfo = null;
+  await onCaptureEnded?.().catch(() => {});
 
   const { files: exportedFiles, diagnostics } = await exportIosTraceData(api.traceFile);
   api.exportedFiles = exportedFiles;

@@ -22,6 +22,7 @@ import {
 import type { DescribeTreeData } from "./tools/describe/contract";
 import { describeIos } from "./tools/describe/platforms/ios";
 import { describeAndroid } from "./tools/describe/platforms/android";
+import { notePreviewViewer } from "./utils/stream-gate";
 
 function findUiFile(name: string): string | null {
   const candidates = [
@@ -235,6 +236,8 @@ export function createPreviewRouter(registry: Registry): Router {
       }
       const { urn, options } = simulatorServerRef(device);
       const api = await registry.resolveService<SimulatorServerApi>(urn, options);
+      // A human is watching this stream: a profiler's pause yields to them.
+      notePreviewViewer(device.id);
       // A foldable is handed the stream of the panel it renders to, resolved
       // now: the UI re-asks this route while connected to one and moves its
       // stream (and the screen its touches name) when the answer changes. When
