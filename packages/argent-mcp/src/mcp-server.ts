@@ -237,8 +237,11 @@ export async function startMcpServer(options: StartMcpServerOptions): Promise<vo
         ];
       } else if (udid && (wantScreenshot || wantTree) && profiling) {
         // The idle wait, screenshot and describe each load the app a profiler
-        // is recording on this device, distorting the profile.
-        content = [...content, { type: "text" as const, text: PROFILING_CAPTURE_SKIPPED_NOTE }];
+        // is recording on this device, distorting the profile. `describe` has
+        // already answered with the tree, so it needs no pointer to itself.
+        if (params.name !== "describe") {
+          content = [...content, { type: "text" as const, text: PROFILING_CAPTURE_SKIPPED_NOTE }];
+        }
       } else if (udid && (wantScreenshot || wantTree)) {
         // Let the screen settle before capturing, bounded by the per-tool
         // budget: `await-screen-idle` polls the tree server-side and usually

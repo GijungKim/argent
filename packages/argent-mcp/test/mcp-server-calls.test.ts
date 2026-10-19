@@ -107,7 +107,10 @@ async function startStub(token?: string): Promise<Stub> {
         return json(200, { data: { idle: true } });
       }
       if (req.method === "POST" && reqUrl === "/tools/describe") {
-        return json(200, { data: { description: "Button 'OK'" } });
+        return json(200, {
+          data: { description: "Button 'OK'" },
+          ...(stubProfiling ? { profiling: true } : {}),
+        });
       }
       json(404, { error: "not found" });
     });
@@ -219,6 +222,18 @@ describe("startMcpServer tool calls", () => {
 
       expect(captureRequests()).toEqual([]);
       expect(textOf(result)).toContain("skipped while a profiler is recording");
+    });
+
+    it("adds no note to an explicit describe, which already answered with the tree", async () => {
+      stubProfiling = true;
+      const result = await client.callTool({
+        name: "describe",
+        arguments: { udid: "emulator-5554" },
+      });
+
+      // Only the call itself: no idle wait, screenshot or second describe.
+      expect(captureRequests().map((r) => r.url)).toEqual(["/tools/describe"]);
+      expect(textOf(result)).not.toContain("profiler");
     });
 
     it("keeps the secret-placeholder note, which takes precedence", async () => {
