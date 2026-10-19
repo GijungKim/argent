@@ -63,8 +63,16 @@ const LISTING = {
     },
     { name: "reject", description: "Reject", inputSchema: { type: "object", properties: {} } },
     { name: "noted", description: "Noted", inputSchema: { type: "object", properties: {} } },
+    { name: "gesture-tap", description: "Tap", inputSchema: { type: "object", properties: {} } },
+    { name: "keyboard", description: "Type", inputSchema: { type: "object", properties: {} } },
+    { name: "run-sequence", description: "Seq", inputSchema: { type: "object", properties: {} } },
   ],
 };
+
+/** Whether the stub flags interaction calls as made while a profiler records. */
+let stubProfiling = false;
+const INTERACTIONS = ["/tools/gesture-tap", "/tools/keyboard", "/tools/run-sequence"];
+const CAPTURE_CALLS = ["/tools/await-screen-idle", "/tools/screenshot", "/tools/describe"];
 
 /** A stub tool-server. With `token`, a request without that bearer token gets 401. */
 async function startStub(token?: string): Promise<Stub> {
@@ -91,6 +99,15 @@ async function startStub(token?: string): Promise<Stub> {
       if (req.method === "POST" && reqUrl === "/tools/reject") return json(422, { error: "nope" });
       if (req.method === "POST" && reqUrl === "/tools/noted") {
         return json(200, { data: { ok: true }, note: "a note" });
+      }
+      if (req.method === "POST" && INTERACTIONS.includes(reqUrl)) {
+        return json(200, { data: { done: true }, ...(stubProfiling ? { profiling: true } : {}) });
+      }
+      if (req.method === "POST" && reqUrl === "/tools/await-screen-idle") {
+        return json(200, { data: { idle: true } });
+      }
+      if (req.method === "POST" && reqUrl === "/tools/describe") {
+        return json(200, { data: { description: "Button 'OK'" } });
       }
       json(404, { error: "not found" });
     });
@@ -163,7 +180,69 @@ describe("startMcpServer tool calls", () => {
 
   it("lists the tools of the tool-server", async () => {
     const { tools } = await client.listTools();
-    expect(tools.map((t) => t.name)).toEqual(["reinstall-app", "reject", "noted"]);
+    expect(tools.map((t) => t.name)).toEqual([
+      "reinstall-app",
+      "reject",
+      "noted",
+      "gesture-tap",
+      "keyboard",
+      "run-sequence",
+    ]);
+  });
+
+  describe("while a profiler records on the device", () => {
+    afterEach(() => {
+      stubProfiling = false;
+    });
+
+    const captureRequests = () => requests.filter((r) => CAPTURE_CALLS.includes(r.url));
+
+    it("skips the post-action capture and says so", async () => {
+      stubProfiling = true;
+      const result = await client.callTool({
+        name: "gesture-tap",
+        arguments: { udid: "emulator-5554", x: 0.5, y: 0.5 },
+      });
+
+      expect(result.isError).toBeFalsy();
+      expect(captureRequests()).toEqual([]);
+      expect(textOf(result)).toContain("skipped while a profiler is recording");
+      expect(textOf(result)).not.toContain("Elements after action");
+    });
+
+    it("skips it for run-sequence too", async () => {
+      stubProfiling = true;
+      const result = await client.callTool({
+        name: "run-sequence",
+        arguments: { udid: "emulator-5554", steps: [] },
+      });
+
+      expect(captureRequests()).toEqual([]);
+      expect(textOf(result)).toContain("skipped while a profiler is recording");
+    });
+
+    it("keeps the secret-placeholder note, which takes precedence", async () => {
+      stubProfiling = true;
+      const result = await client.callTool({
+        name: "keyboard",
+        arguments: { udid: "emulator-5554", text: "{{secret:PW}}" },
+      });
+
+      expect(captureRequests()).toEqual([]);
+      expect(textOf(result)).toContain("{{secret:…}} placeholder");
+      expect(textOf(result)).not.toContain("profiler");
+    });
+
+    it("captures as usual when the envelope carries no profiling flag", async () => {
+      const result = await client.callTool({
+        name: "gesture-tap",
+        arguments: { udid: "emulator-5554", x: 0.5, y: 0.5 },
+      });
+
+      expect(captureRequests().map((r) => r.url)).toEqual(CAPTURE_CALLS);
+      expect(textOf(result)).toContain("Button 'OK'");
+      expect(textOf(result)).not.toContain("profiler");
+    });
   });
 
   it("uploads a tar-upload input and returns the tool result", async () => {

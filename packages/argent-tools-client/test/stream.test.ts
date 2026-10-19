@@ -59,6 +59,24 @@ describe("callTool progress streaming", () => {
     expect(result.note).toBe("hi");
   });
 
+  it("passes the envelope's profiling flag through on both response paths", async () => {
+    let streamed = false;
+    await startServer((_req, res) => {
+      if (streamed) {
+        res.writeHead(200, { "Content-Type": "application/x-ndjson" });
+        res.end(`${JSON.stringify({ event: "result", data: {}, profiling: true })}\n`);
+      } else {
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ data: {}, profiling: true }));
+      }
+    });
+
+    const { callTool } = createToolsClient();
+    expect((await callTool("streamy", {})).profiling).toBe(true);
+    streamed = true;
+    expect((await callTool("streamy", {}, { onProgress: () => {} })).profiling).toBe(true);
+  });
+
   it("sends the Accept header only when a progress consumer is attached", async () => {
     const accepts: Array<string | undefined> = [];
     await startServer((req, res) => {
