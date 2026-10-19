@@ -62,6 +62,14 @@ esac
 });
 
 afterAll(() => {
+  // A test that failed midway may have left its stub child behind.
+  if (fs.existsSync(childPidFile())) {
+    try {
+      process.kill(Number(fs.readFileSync(childPidFile(), "utf8")), "SIGKILL");
+    } catch {
+      /* already gone */
+    }
+  }
   process.env.PATH = originalPath;
   fs.rmSync(dir, { recursive: true, force: true });
 });

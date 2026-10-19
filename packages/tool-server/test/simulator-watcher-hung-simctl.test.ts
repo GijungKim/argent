@@ -125,18 +125,23 @@ describe("simulator-watcher with a hung simctl", () => {
     stop();
   });
 
-  it("kills the other device sets' calls once one set fails", async () => {
+  it("waits for every device set, and backs off when any of them timed out", async () => {
     additionalSets.push(os.tmpdir());
-    let defaultSetSignal: AbortSignal | undefined;
-    execSimctlMock.mockImplementation((args: string[], opts: { signal: AbortSignal }) => {
+    let finishDefaultSet: (err: Error) => void = () => {};
+    execSimctlMock.mockImplementation((args: string[]) => {
       if (args.includes("--set")) return Promise.reject(new Error("exit 1"));
-      defaultSetSignal = opts.signal;
-      return new Promise<string>(() => {});
+      return new Promise<string>((_, reject) => (finishDefaultSet = reject));
     });
 
     const { ready, stop } = startSimulatorWatcher(registry);
+    let settled = false;
+    void ready.then(() => (settled = true));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(settled).toBe(false);
+
+    finishDefaultSet(new SimctlTimeoutError(["simctl", "list", "devices", "--json"], 10_000));
     await ready;
-    expect(defaultSetSignal?.aborted).toBe(true);
+    expect(stderrWrites.filter((w) => w.includes("xcodebuild -runFirstLaunch"))).toHaveLength(1);
     stop();
   });
 
