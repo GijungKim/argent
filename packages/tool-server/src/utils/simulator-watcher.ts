@@ -15,6 +15,8 @@ import {
 import { execSimctl, SimctlTimeoutError } from "./simctl-exec";
 
 const POLL_INTERVAL_MS = 10_000;
+/** Ceiling on the gap between polls while `simctl` keeps timing out. */
+const MAX_TIMEOUT_BACKOFF_MS = 300_000;
 
 async function getBootedUdidsInSet(
   deviceSet: DeviceSetPath,
@@ -44,15 +46,22 @@ async function getBootedUdidsInSet(
  * Booted simulators across the default set and every configured additional set.
  * Throws if any set fails, so the caller skips the tick instead of reading a
  * transient error as "everything shut down". A configured set whose directory is
- * missing is not queried — querying would make simctl materialize it.
+ * missing is not queried — querying would make simctl materialize it. Once one
+ * set fails, the calls still running for the others are killed with the tick.
  */
-async function getBootedUdids(signal: AbortSignal): Promise<Set<string>> {
+async function getBootedUdids(stopSignal: AbortSignal): Promise<Set<string>> {
   const sets: DeviceSetPath[] = [
     null,
     ...configuredAdditionalDeviceSets().filter((p) => fs.existsSync(p)),
   ];
-  const perSet = await Promise.all(sets.map((set) => getBootedUdidsInSet(set, signal)));
-  return new Set(perSet.flatMap((s) => [...s]));
+  const tick = new AbortController();
+  const signal = AbortSignal.any([stopSignal, tick.signal]);
+  try {
+    const perSet = await Promise.all(sets.map((set) => getBootedUdidsInSet(set, signal)));
+    return new Set(perSet.flatMap((s) => [...s]));
+  } finally {
+    tick.abort();
+  }
 }
 
 async function initUdid(
@@ -83,8 +92,13 @@ export function startSimulatorWatcher(registry: Registry): {
   const reportedSkips = new Set<string>();
   /** Kills any `simctl` still running when the watcher stops. */
   const stopController = new AbortController();
-  /** Set while `simctl` keeps timing out, so the hint is logged once per outage. */
-  let reportedTimeout = false;
+  /**
+   * Polls in a row whose `simctl` timed out. Each one doubles the gap before the
+   * next attempt, since every attempt restarts the hung `xcodebuild
+   * -runFirstLaunch`; the first also logs the hint, once per outage.
+   */
+  let consecutiveTimeouts = 0;
+  let nextPollAt = 0;
 
   /**
    * Split the booted set into the simulators the watcher may drive and the ones
@@ -191,17 +205,23 @@ export function startSimulatorWatcher(registry: Registry): {
         await getBootedUdids(stopController.signal)
       ));
     } catch (err) {
-      if (err instanceof SimctlTimeoutError && !reportedTimeout) {
-        reportedTimeout = true;
-        process.stderr.write(
-          `[simulator-watcher] ${err.message}; skipping simulator discovery until it does. ` +
-            `If Xcode was just updated, open Xcode once or run \`sudo xcodebuild -runFirstLaunch\`.\n`
-        );
+      if (err instanceof SimctlTimeoutError) {
+        consecutiveTimeouts += 1;
+        nextPollAt =
+          Date.now() +
+          Math.min(POLL_INTERVAL_MS * 2 ** consecutiveTimeouts, MAX_TIMEOUT_BACKOFF_MS);
+        if (consecutiveTimeouts === 1) {
+          process.stderr.write(
+            `[simulator-watcher] ${err.message}; retrying with backoff until it does. ` +
+              `If Xcode was just updated, open Xcode once or run \`sudo xcodebuild -runFirstLaunch\`.\n`
+          );
+        }
       }
       // xcrun unavailable or transient error — skip this tick
       return;
     }
-    reportedTimeout = false;
+    consecutiveTimeouts = 0;
+    nextPollAt = 0;
 
     /**
      * Before the init pass, so a granted claim re-resolves into attach mode on
@@ -242,11 +262,12 @@ export function startSimulatorWatcher(registry: Registry): {
   // The simctl call is bounded, so this resolves even when simctl hangs.
   const ready = poll(true);
 
-  // A tick that lands while the previous poll is still running is skipped, so a
-  // slow simctl never has more than one call in flight.
+  // A tick that lands while the previous poll is still running, or inside the
+  // backoff after a timeout, is skipped, so a slow simctl never has more than one
+  // call in flight. Every await in a poll is bounded, so neither holds forever.
   let inFlight: Promise<void> | null = ready.catch(() => {}).finally(() => (inFlight = null));
   const interval = setInterval(() => {
-    if (inFlight) return;
+    if (inFlight || Date.now() < nextPollAt) return;
     inFlight = poll(false)
       .catch(() => {})
       .finally(() => (inFlight = null));

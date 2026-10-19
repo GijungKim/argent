@@ -24,6 +24,16 @@ function childIsAlive(): boolean {
   }
 }
 
+/** Polls rather than sleeping once: a killed child may linger briefly unreaped. */
+async function waitForChildDeath(): Promise<boolean> {
+  const deadline = Date.now() + 2_000;
+  while (childIsAlive()) {
+    if (Date.now() > deadline) return false;
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  return true;
+}
+
 async function waitForChildPid(): Promise<void> {
   const deadline = Date.now() + 5_000;
   while (!fs.existsSync(childPidFile()) || !fs.readFileSync(childPidFile(), "utf8").trim()) {
@@ -67,21 +77,34 @@ describe("execSimctl", () => {
 
   it("kills the wrapper's child on timeout", async () => {
     fs.rmSync(childPidFile(), { force: true });
-    const call = execSimctl(["simctl", "hang"], { timeoutMs: 500 });
+    // Settled-capture first, so a slow start cannot leave the rejection unobserved.
+    const call = execSimctl(["simctl", "hang"], { timeoutMs: 2_000 }).catch((e: unknown) => e);
     await waitForChildPid();
-    await expect(call).rejects.toBeInstanceOf(SimctlTimeoutError);
-    await new Promise((r) => setTimeout(r, 100));
-    expect(childIsAlive()).toBe(false);
+    expect(await call).toBeInstanceOf(SimctlTimeoutError);
+    expect(await waitForChildDeath()).toBe(true);
   });
 
   it("kills the wrapper's child on abort", async () => {
     fs.rmSync(childPidFile(), { force: true });
     const controller = new AbortController();
-    const call = execSimctl(["simctl", "hang"], { timeoutMs: 60_000, signal: controller.signal });
+    const call = execSimctl(["simctl", "hang"], {
+      timeoutMs: 60_000,
+      signal: controller.signal,
+    }).catch((e: unknown) => e);
     await waitForChildPid();
     controller.abort();
-    await expect(call).rejects.toThrow(/aborted/);
-    await new Promise((r) => setTimeout(r, 100));
-    expect(childIsAlive()).toBe(false);
+    expect(String(await call)).toMatch(/aborted/);
+    expect(await waitForChildDeath()).toBe(true);
+  });
+
+  it("does not spawn once already aborted", async () => {
+    fs.rmSync(childPidFile(), { force: true });
+    const controller = new AbortController();
+    controller.abort();
+    await expect(execSimctl(["simctl", "hang"], { signal: controller.signal })).rejects.toThrow(
+      /aborted/
+    );
+    await new Promise((r) => setTimeout(r, 200));
+    expect(fs.existsSync(childPidFile())).toBe(false);
   });
 });

@@ -293,6 +293,9 @@ export function start(): void {
     if (exitCode > finalExitCode) finalExitCode = exitCode;
     if (shuttingDown) return;
     shuttingDown = true;
+    // First, before any await: the watcher's simctl calls run in their own
+    // process groups, so only this abort reaps them if the exit is cut short.
+    stopWatcher();
 
     eventLog?.info({
       type: "tool_server.stopping",
@@ -322,7 +325,6 @@ export function start(): void {
 
     previewWindow.dispose();
     updateChecker.dispose();
-    stopWatcher();
     httpHandle.dispose();
 
     // Dispose BEFORE recording toolserver:stop, so a crash escalating mid-teardown
@@ -399,6 +401,8 @@ export function start(): void {
   // warm-up has settled (so the accept path never pays for it).
   Promise.all([watcherReady, identityWarm])
     .then(() => {
+      // A shutdown during startup aborts the first poll, which settles ready.
+      if (shuttingDown) return;
       server = httpHandle.app.listen(PORT, HOST, () => {
         // Past this point a crash is a serving-time fault, not a startup fault.
         listening = true;

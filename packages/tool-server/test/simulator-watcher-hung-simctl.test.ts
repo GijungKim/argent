@@ -14,6 +14,16 @@ vi.mock("../src/utils/simctl-exec", async () => {
   return { ...actual, execSimctl: (...args: unknown[]) => execSimctlMock(...args) };
 });
 
+const additionalSets: string[] = [];
+
+vi.mock("../src/utils/ios-device-sets", async () => {
+  const actual = await vi.importActual<typeof import("../src/utils/ios-device-sets")>(
+    "../src/utils/ios-device-sets"
+  );
+  return { ...actual, configuredAdditionalDeviceSets: () => additionalSets };
+});
+
+import * as os from "node:os";
 import type { Registry } from "@argent/registry";
 import { SimctlTimeoutError } from "../src/utils/simctl-exec";
 import { startSimulatorWatcher } from "../src/utils/simulator-watcher";
@@ -27,6 +37,7 @@ let stderrWrites: string[];
 
 beforeEach(() => {
   execSimctlMock.mockReset();
+  additionalSets.length = 0;
   stderrWrites = [];
   vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
     stderrWrites.push(String(chunk));
@@ -87,6 +98,46 @@ describe("simulator-watcher with a hung simctl", () => {
 
     const hints = stderrWrites.filter((w) => w.includes("xcodebuild -runFirstLaunch"));
     expect(hints).toHaveLength(2);
+  });
+
+  it("backs off while simctl keeps timing out, and resumes the interval once it answers", async () => {
+    const callTimes: number[] = [];
+    let hung = true;
+    execSimctlMock.mockImplementation(async () => {
+      callTimes.push(Date.now());
+      if (hung) throw new SimctlTimeoutError(["simctl", "list", "devices", "--json"], 10_000);
+      return '{"devices":{}}';
+    });
+
+    const start = Date.now();
+    const { ready, stop } = startSimulatorWatcher(registry);
+    await ready;
+    await vi.advanceTimersByTimeAsync(600_000);
+    // Gaps of 20 s, 40 s, 80 s, 160 s, then capped at 300 s.
+    expect(callTimes.map((t) => t - start)).toEqual([0, 20_000, 60_000, 140_000, 300_000, 600_000]);
+
+    hung = false;
+    callTimes.length = 0;
+    await vi.advanceTimersByTimeAsync(330_000);
+    const afterRecovery = callTimes.map((t) => t - start);
+    // The call at 900 s answers; from there the plain 10 s interval applies.
+    expect(afterRecovery.slice(0, 3)).toEqual([900_000, 910_000, 920_000]);
+    stop();
+  });
+
+  it("kills the other device sets' calls once one set fails", async () => {
+    additionalSets.push(os.tmpdir());
+    let defaultSetSignal: AbortSignal | undefined;
+    execSimctlMock.mockImplementation((args: string[], opts: { signal: AbortSignal }) => {
+      if (args.includes("--set")) return Promise.reject(new Error("exit 1"));
+      defaultSetSignal = opts.signal;
+      return new Promise<string>(() => {});
+    });
+
+    const { ready, stop } = startSimulatorWatcher(registry);
+    await ready;
+    expect(defaultSetSignal?.aborted).toBe(true);
+    stop();
   });
 
   it("aborts the in-flight call on stop", async () => {

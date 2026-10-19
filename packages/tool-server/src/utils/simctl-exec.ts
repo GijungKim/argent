@@ -21,6 +21,10 @@ export class SimctlTimeoutError extends Error {
  * leaves the `xcodebuild` behind as an orphan. Spawning detached makes the
  * child lead its own group, so `kill(-pid)` reaps the wrapper's descendants
  * too. `execFile` drops `detached`, hence the hand-rolled spawn.
+ *
+ * The flip side: the call leaves the caller's own group, so a caller that is
+ * SIGKILLed mid-call (no chance to abort) no longer takes it along. Abort
+ * through `signal` on every orderly exit.
  */
 export function execSimctl(
   args: readonly string[],
@@ -28,6 +32,10 @@ export function execSimctl(
 ): Promise<string> {
   const timeoutMs = options.timeoutMs ?? SIMCTL_SPAWN_TIMEOUT_MS;
   return new Promise((resolve, reject) => {
+    if (options.signal?.aborted) {
+      reject(new Error(`xcrun ${args.join(" ")} aborted`));
+      return;
+    }
     const child = spawn("xcrun", args, { detached: true, stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
@@ -56,8 +64,7 @@ export function execSimctl(
       settle(new SimctlTimeoutError(args, timeoutMs));
     }, timeoutMs);
 
-    if (options.signal?.aborted) onAbort();
-    else options.signal?.addEventListener("abort", onAbort, { once: true });
+    options.signal?.addEventListener("abort", onAbort, { once: true });
 
     child.on("error", (err) => settle(err));
     child.on("close", (code, sig) => {
