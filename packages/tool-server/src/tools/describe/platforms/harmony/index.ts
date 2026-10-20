@@ -25,9 +25,9 @@ const EMPTY_HINT =
   "call describe again, or screenshot to see what is on screen.";
 
 /**
- * The wait tools' fetcher. Their last poll lands on the deadline with no
- * budget, where any other backend's read is abandoned as unsettled; refusing
- * here instead would read as a failed fetch.
+ * The wait tools' fetcher. A poll with no budget left (the last one, on the
+ * deadline) never settles, as on every other backend, so it cannot read as a
+ * failed fetch.
  */
 export function pollHarmonyTree(connectKey: string, budgetMs: number): Promise<DescribeTreeData> {
   if (budgetMs <= 0) return new Promise(() => {});

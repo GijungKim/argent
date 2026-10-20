@@ -33,7 +33,7 @@ Refused as unsupported on harmony:
 - `paste`, so a `{{secret:...}}` placeholder goes through `keyboard` only.
 - Screen recording: HarmonyOS exposes no readable frame stream. Use `screenshot` for a still frame.
 
-`gesture-pinch` sends both fingers' endpoints in one `uinput` call and the device interpolates the move; `durationMs` is wall-clock time, clamped to 1-15000ms. `gesture-swipe` is likewise one on-device call. `gesture-tap` with `clickCount: 2` is one double-tap gesture; 3 or more land as separate taps.
+`gesture-pinch` sends both fingers' endpoints in one `uinput` call and the device interpolates the move; `durationMs` is wall-clock time, clamped to 1-15000ms. `gesture-swipe` is likewise one on-device call, and its `durationMs` sets speed, clamped to `uitest`'s 200-40000 px/s: a short slow swipe ends early, a long fast one runs late. `gesture-tap` with `clickCount: 2` is one double-tap gesture; 3 or more land as separate taps.
 
 ## Discovery
 
@@ -63,7 +63,7 @@ Only `enter` (alias `return`), `backspace` (alias `delete`), `space`, `arrow-lef
 ## App launch and open-url
 
 - `launch-app` and `restart-app` take the bundle name as listed by `bm dump -a` (e.g. `com.huawei.hmos.calculator`). `activity` is ignored: the ability comes from the bundle's own `abilityInfos`. A launch fails if the app is not installed.
-- `open-url` resolves any scheme through `aa start -U`, and every result carries a `note`: `aa` reports success whenever the system accepts the URI. A web URL can leave the screen unchanged, and `tel:` / `mailto:` can leave a "No options to open with" dialog over it. Confirm with `describe` or `screenshot` before treating the link as followed. It fails only when nothing claims the scheme at all.
+- `open-url` resolves any scheme through `aa start -U`, and every result carries a `note`: `aa` reports success whenever the system accepts the URI. A web URL can leave the screen unchanged, and `tel:` / `mailto:` can leave a "No options to open with" dialog over it. Confirm with `describe` or `screenshot` before treating the link as followed. It fails whenever `aa` refuses the URI, as it does a scheme nothing claims.
 
 ## E2E tests
 

@@ -216,13 +216,7 @@ export interface ToolCapability {
  * can surface verbatim.
  */
 export type ToolDependency =
-  | "adb"
-  | "xcrun"
-  | "emulator"
-  | "sim-remote"
-  | "vega"
-  | "harmony-emulator"
-  | "hdc";
+  "adb" | "xcrun" | "emulator" | "sim-remote" | "vega" | "harmony-emulator" | "hdc";
 
 export interface ToolDefinition<TParams = void, TResult = unknown> {
   id: string;
