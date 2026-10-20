@@ -1,5 +1,7 @@
 import { FAILURE_CODES, FailureError } from "@argent/registry";
 import type { DeviceInfo, DeviceKind, Platform } from "@argent/registry";
+import { InvalidToolInputError } from "./capability";
+import { HARMONY_DISABLED_REASON, isHarmonyEnabled } from "./harmony-flag";
 import {
   EXTERNAL_PREFIX,
   externalNativeId,
@@ -70,6 +72,15 @@ export const HARMONY_ID_PREFIX = "harmony-";
  */
 export const HARMONY_EMULATOR_ID_PREFIX = "harmony-emulator-";
 
+export function assertHarmonyEnabled(): void {
+  if (isHarmonyEnabled()) return;
+  throw new InvalidToolInputError(`${HARMONY_DISABLED_REASON}.`, {
+    error_code: FAILURE_CODES.HARMONY_DISABLED,
+    failure_stage: "harmony_flag",
+    error_kind: "unsupported",
+  });
+}
+
 export function harmonyEmulatorId(instanceName: string): string {
   return `${HARMONY_EMULATOR_ID_PREFIX}${instanceName}`;
 }
@@ -86,10 +97,13 @@ export function harmonyInstanceName(udid: string): string {
 }
 
 /**
- * The connect key behind a `harmony-<key>` id. An instance id is refused: a
- * flow step reaches here without the HTTP capability gate.
+ * The connect key behind a `harmony-<key>` id. Every path that drives a
+ * HarmonyOS device goes through here, so it also enforces the `harmonyos`
+ * flag. An instance id is refused: a flow step reaches here without the HTTP
+ * capability gate.
  */
 export function harmonyConnectKey(udid: string): string {
+  assertHarmonyEnabled();
   if (udid.startsWith(HARMONY_EMULATOR_ID_PREFIX)) {
     throw new FailureError(
       `"${udid}" names a HarmonyOS emulator instance, not a device to drive. Start it with ` +

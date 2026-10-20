@@ -49,6 +49,7 @@ import { listIosSimulators } from "../../utils/ios-devices";
 import { deviceSetForUdid, simctlPrefix } from "../../utils/ios-device-sets";
 import { androidHeadlessFromEnv, iosHeadlessFromEnv } from "../../utils/no-window-env";
 import {
+  assertHarmonyEnabled,
   classifyDevice,
   harmonyInstanceName,
   stripRemotePrefix,
@@ -1997,6 +1998,8 @@ function bootHarmony(params: {
   bootTimeoutMs: number;
   force?: boolean;
 }): Promise<HarmonyBootResult> {
+  // `harmonyInstance` carries no `udid`, so the HTTP capability gate never sees it.
+  assertHarmonyEnabled();
   // Same-`force` boots share one run; opposite ones serialize, or both reach
   // `-start` and the instance starts twice.
   const key = params.instanceName;

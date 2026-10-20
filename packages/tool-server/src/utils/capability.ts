@@ -6,6 +6,7 @@ import {
   type Platform,
   type ToolCapability,
 } from "@argent/registry";
+import { HARMONY_DISABLED_REASON, isHarmonyEnabled } from "./harmony-flag";
 
 /**
  * Thrown when a device's platform/kind isn't in the tool's `capability`
@@ -122,6 +123,9 @@ export function assertSupported(
   device: DeviceInfo
 ): void {
   if (!capability) return;
+  if (device.platform === "harmony" && !isHarmonyEnabled()) {
+    throw new UnsupportedOperationError(toolId, device, HARMONY_DISABLED_REASON);
+  }
   const matrix = platformMatrix(device.platform, capability);
   if (!matrix) {
     throw new UnsupportedOperationError(toolId, device, `no ${device.platform} support declared`);

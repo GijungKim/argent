@@ -13,6 +13,7 @@ import { listIosPhysicalDevices } from "../../utils/ios-device/devicectl";
 import { simctlListDevices } from "../../utils/sim-remote";
 import { withRemotePrefix, harmonyDeviceId, harmonyEmulatorId } from "../../utils/device-info";
 import { listHarmonyInstances, listHarmonyHdcTargets } from "../../utils/harmony-devices";
+import { isHarmonyEnabled } from "../../utils/harmony-flag";
 import { discoverChromiumDevices, type ChromiumDevice } from "../../utils/chromium-discovery";
 import {
   listVegaDevices,
@@ -322,6 +323,7 @@ Booted/ready devices are listed first. Platforms whose CLI is unavailable are si
   zodSchema,
   services: () => ({}),
   async execute(_services, _params) {
+    const harmonyEnabled = isHarmonyEnabled();
     // Wrapping even the already-self-bounded iOS / AVD-list / Chromium branches makes
     // the "no branch can hang the fan-out" guarantee universal. The deadline only
     // substitutes a fallback on *slowness*; a rejection still propagates, so the
@@ -366,16 +368,20 @@ Booted/ready devices are listed first. Platforms whose CLI is unavailable are si
         [],
         "vega"
       ),
-      withDeadline(
-        listHarmonyInstances().catch(() => []),
-        [],
-        "harmony"
-      ),
-      withDeadline(
-        listHarmonyHdcTargets().catch(() => []),
-        [],
-        "harmony-hdc"
-      ),
+      harmonyEnabled
+        ? withDeadline(
+            listHarmonyInstances().catch(() => []),
+            [],
+            "harmony"
+          )
+        : [],
+      harmonyEnabled
+        ? withDeadline(
+            listHarmonyHdcTargets().catch(() => []),
+            [],
+            "harmony-hdc"
+          )
+        : [],
       /**
        * One directory stat when no provider is registered (the common case)
        * and a short HTTP probe per provider otherwise.
