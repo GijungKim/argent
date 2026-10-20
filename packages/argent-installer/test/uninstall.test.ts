@@ -288,8 +288,8 @@ describe("uninstall — skills cleanup helpers", () => {
     const skillsDir = path.join(tmpDir, "skills");
 
     writeFile(
-      path.join(skillsDir, "argent-create-flow", "SKILL.md"),
-      ["---", "name: argent-create-flow", "description: test", "---", "", "body"].join("\n")
+      path.join(skillsDir, "argent-create-e2e", "SKILL.md"),
+      ["---", "name: argent-create-e2e", "description: test", "---", "", "body"].join("\n")
     );
     writeFile(
       path.join(skillsDir, "argent-react-native-optimization", "SKILL.md"),
@@ -305,7 +305,7 @@ describe("uninstall — skills cleanup helpers", () => {
     writeFile(path.join(skillsDir, "references", "guide.md"));
 
     expect(getBundledSkillNames(skillsDir)).toEqual([
-      "argent-create-flow",
+      "argent-create-e2e",
       "argent-react-native-optimization",
     ]);
   });
@@ -331,28 +331,28 @@ describe("uninstall — skills cleanup helpers", () => {
 
   it("removes installed skill entries by current skill names only", () => {
     const targetDir = path.join(tmpDir, ".claude", "skills");
-    const storeDir = path.join(tmpDir, ".agents", "skills", "argent-create-flow");
+    const storeDir = path.join(tmpDir, ".agents", "skills", "argent-create-e2e");
 
     writeFile(path.join(storeDir, "SKILL.md"), "skill");
     fs.mkdirSync(targetDir, { recursive: true });
     fs.symlinkSync(
-      path.relative(targetDir, path.join(tmpDir, ".agents", "skills", "argent-create-flow")),
-      path.join(targetDir, "argent-create-flow")
+      path.relative(targetDir, path.join(tmpDir, ".agents", "skills", "argent-create-e2e")),
+      path.join(targetDir, "argent-create-e2e")
     );
     writeFile(path.join(targetDir, "argent-react-native-optimization", "SKILL.md"), "argent");
     writeFile(path.join(targetDir, "react-native-optimization", "SKILL.md"), "unrelated");
     writeFile(path.join(targetDir, "vendor-skill", "SKILL.md"), "vendor");
 
     const result = removeBundledSkillInstalls(
-      ["argent-create-flow", "argent-react-native-optimization"],
+      ["argent-create-e2e", "argent-react-native-optimization"],
       targetDir
     );
 
     expect(result.removedPaths.sort()).toEqual([
-      "argent-create-flow",
+      "argent-create-e2e",
       "argent-react-native-optimization",
     ]);
-    expect(fs.existsSync(path.join(targetDir, "argent-create-flow"))).toBe(false);
+    expect(fs.existsSync(path.join(targetDir, "argent-create-e2e"))).toBe(false);
     expect(fs.existsSync(path.join(targetDir, "argent-react-native-optimization"))).toBe(false);
     expect(fs.existsSync(path.join(targetDir, "react-native-optimization"))).toBe(true);
     expect(fs.existsSync(path.join(targetDir, "vendor-skill"))).toBe(true);
@@ -365,7 +365,7 @@ describe("uninstall — skills cleanup helpers", () => {
     // time it reaches .claude/skills every Argent link is dangling.
     const targetDir = path.join(tmpDir, ".claude", "skills");
     const storeDir = path.join(tmpDir, ".agents", "skills");
-    const skillNames = ["argent-create-flow", "argent-react-native-optimization"];
+    const skillNames = ["argent-create-e2e", "argent-react-native-optimization"];
 
     fs.mkdirSync(targetDir, { recursive: true });
     for (const skillName of skillNames) {
@@ -399,13 +399,13 @@ describe("uninstall — skills cleanup helpers", () => {
     const targetDir = path.join(tmpDir, ".claude", "skills");
     fs.mkdirSync(targetDir, { recursive: true });
     fs.symlinkSync(
-      path.join("..", "..", ".agents", "skills", "argent-create-flow"),
-      path.join(targetDir, "argent-create-flow")
+      path.join("..", "..", ".agents", "skills", "argent-create-e2e"),
+      path.join(targetDir, "argent-create-e2e")
     );
 
-    const result = removeBundledSkillInstalls(["argent-create-flow"], targetDir);
+    const result = removeBundledSkillInstalls(["argent-create-e2e"], targetDir);
 
-    expect(result).toEqual({ removedPaths: ["argent-create-flow"], removedRoot: true });
+    expect(result).toEqual({ removedPaths: ["argent-create-e2e"], removedRoot: true });
     expect(fs.existsSync(targetDir)).toBe(false);
   });
 
@@ -417,7 +417,7 @@ describe("uninstall — skills cleanup helpers", () => {
         {
           version: 1,
           skills: {
-            "argent-create-flow": { source: "argent" },
+            "argent-create-e2e": { source: "argent" },
             "argent-react-native-optimization": { source: "argent" },
             "react-native-optimization": { source: "vendor" },
             "vendor-skill": { source: "vendor" },
@@ -429,12 +429,12 @@ describe("uninstall — skills cleanup helpers", () => {
     );
 
     const result = cleanupSkillsLockFile(lockPath, [
-      "argent-create-flow",
+      "argent-create-e2e",
       "argent-react-native-optimization",
     ]);
 
     expect(result).toEqual({
-      removedSkills: ["argent-create-flow", "argent-react-native-optimization"],
+      removedSkills: ["argent-create-e2e", "argent-react-native-optimization"],
       removedFile: false,
     });
 
@@ -453,7 +453,7 @@ describe("uninstall — skills cleanup helpers", () => {
         {
           version: 1,
           skills: {
-            "argent-create-flow": { source: "argent" },
+            "argent-create-e2e": { source: "argent" },
           },
         },
         null,
@@ -461,10 +461,10 @@ describe("uninstall — skills cleanup helpers", () => {
       )
     );
 
-    const result = cleanupSkillsLockFile(lockPath, ["argent-create-flow"]);
+    const result = cleanupSkillsLockFile(lockPath, ["argent-create-e2e"]);
 
     expect(result).toEqual({
-      removedSkills: ["argent-create-flow"],
+      removedSkills: ["argent-create-e2e"],
       removedFile: true,
     });
     expect(fs.existsSync(lockPath)).toBe(false);
@@ -633,6 +633,31 @@ describe("uninstall — local (committable) mode package removal", () => {
       expect.objectContaining({ has_uninstalled_package: true })
     );
     expect(telemetryMock.resetLocalTelemetryState).toHaveBeenCalledWith();
+  });
+
+  it("prunes legacy skill dirs that are no longer bundled", async () => {
+    stageLocalProject();
+    const store = path.join(tmpDir, ".agents", "skills");
+    writeFile(path.join(store, "argent-create-flow", "SKILL.md"));
+    writeFile(path.join(store, "my-skill", "SKILL.md"));
+    const editor = path.join(tmpDir, ".claude", "skills");
+    fs.mkdirSync(editor, { recursive: true });
+    fs.symlinkSync(path.join(store, "argent-qa-flows"), path.join(editor, "argent-qa-flows"));
+    writeFile(
+      path.join(tmpDir, "skills-lock.json"),
+      JSON.stringify({ version: 1, skills: { "argent-qa-flows": {}, "my-skill": {} } })
+    );
+    process.chdir(tmpDir);
+
+    await uninstall(["--yes"]);
+
+    expect(fs.existsSync(path.join(store, "argent-create-flow"))).toBe(false);
+    expect(fs.lstatSync(path.join(editor, "argent-qa-flows"), { throwIfNoEntry: false })).toBe(
+      undefined
+    );
+    expect(fs.existsSync(path.join(store, "my-skill"))).toBe(true);
+    const lock = JSON.parse(fs.readFileSync(path.join(tmpDir, "skills-lock.json"), "utf8"));
+    expect(lock.skills).toEqual({ "my-skill": {} });
   });
 
   it("--local skips the package removal when the project never opted into argent", async () => {

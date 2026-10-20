@@ -171,7 +171,7 @@ One call does one action. `text` and `key` are mutually exclusive, and a call th
 
 Special keys: `enter`, `escape`, `backspace`, `tab`, `space`, `arrow-up`, `arrow-down`, `arrow-left`, `arrow-right`, `f1`–`f12`. Optional: `"delayMs": 100` between keystrokes (default 50ms); applies to the iOS simulator and Chromium; it is ignored on Android phones/tablets (typed via `adb input text`, no per-key cadence), on Vega, and on TV targets.
 
-**Typing secrets.** To enter a credential without its plaintext ever entering your context, transcript, or logs, use a secret placeholder in `text` (works in `keyboard`, `paste`, `run-sequence` keyboard steps, and flow `type` steps):
+**Typing secrets.** To enter a credential without its plaintext ever entering your context, transcript, or logs, use a secret placeholder in `text` (works in `keyboard`, `paste`, `run-sequence` keyboard steps, and e2e `type` steps):
 
 ```json
 { "udid": "<UDID>", "text": "{{secret:APP_PASSWORD}}" }
@@ -249,7 +249,7 @@ Use after launch/navigation and before a raw tap, when an early-painted element 
 
 On local iOS, Android, and Chromium, the tool waits for a non-empty `describe` tree to stop changing. Continue only when `settled: true`. Pair it with a destination-specific `await-ui-element`; stillness does not identify a screen.
 
-Use it only for live diagnosis. Do not record it or put it in `run-sequence`. Flows use `await: { idle: true }`, which also compares pixels. This live tool can return during a presentation-layer animation.
+Use it only for live diagnosis. Do not record it or put it in `run-sequence`. E2E tests use `await: { idle: true }`, which also compares pixels. This live tool can return during a presentation-layer animation.
 
 ---
 
