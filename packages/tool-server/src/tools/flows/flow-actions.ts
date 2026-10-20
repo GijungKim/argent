@@ -1605,11 +1605,13 @@ async function runSwipe(
   // eats the touch and both steps still report pass. Unconditional, since
   // `momentum: false` zeroes the finger's release velocity, not the app's
   // animations.
-  try {
-    await settleTree(env);
-  } catch {
-    // Tree-source outage AFTER the gesture landed: proceed as runSnapshot's
-    // settle does rather than fail a swipe that happened.
+  if (supportsFlowTree(env.device.platform)) {
+    try {
+      await settleTree(env);
+    } catch {
+      // Tree-source outage AFTER the gesture landed: proceed as runSnapshot's
+      // settle does rather than fail a swipe that happened.
+    }
   }
   // settleTree returns undefined only on abort, which must read as the uniform
   // aborted skip, never a pass.

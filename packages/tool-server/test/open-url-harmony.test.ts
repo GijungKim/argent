@@ -1,4 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// HarmonyOS is behind the `harmonyos` flag; these cases drive it with the flag on.
+vi.mock("../src/utils/harmony-flag", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/utils/harmony-flag")>()),
+  isHarmonyEnabled: () => true,
+}));
 import { FAILURE_CODES, FailureError, type DeviceInfo } from "@argent/registry";
 
 // `openHarmonyUrl`'s reading of `aa` is covered in harmony-apps.test.ts.

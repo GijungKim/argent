@@ -7,6 +7,7 @@ import {
   assertHarmonyDisplayReady,
   harmonyDisplay,
   holdUitestQueue,
+  HARMONY_DISPLAY_TIMEOUT_MS,
   remainingBudget,
 } from "../../../utils/harmony-uitest";
 import type { KeyboardParams, KeyboardResult } from "../types";
@@ -94,7 +95,10 @@ async function typeHarmony(
       assertHarmonyDisplayReady(
         await harmonyDisplay(
           connectKey,
-          remainingBudget(connectKey, deadline, "the display re-read")
+          Math.min(
+            HARMONY_DISPLAY_TIMEOUT_MS,
+            remainingBudget(connectKey, deadline, "the display re-read")
+          )
         ),
         "type"
       );

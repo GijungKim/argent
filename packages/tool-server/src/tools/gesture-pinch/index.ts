@@ -9,6 +9,7 @@ import {
   assertHarmonyDisplayReady,
   harmonyDisplay,
   holdUitestQueue,
+  HARMONY_DISPLAY_TIMEOUT_MS,
   remainingBudget,
   toDevicePoint,
 } from "../../utils/harmony-uitest";
@@ -149,7 +150,10 @@ Use when you need to zoom in or out on a map, image, or zoomable view. Returns {
           // Re-read: the geometry of a foldable may have changed while queued.
           const live = await harmonyDisplay(
             connectKey,
-            remainingBudget(connectKey, deadline, "the display re-read")
+            Math.min(
+              HARMONY_DISPLAY_TIMEOUT_MS,
+              remainingBudget(connectKey, deadline, "the display re-read")
+            )
           );
           assertHarmonyDisplayReady(live, "pinch");
           const start = contactsAt(params, 0);

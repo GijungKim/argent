@@ -10,6 +10,11 @@ import { createAwaitUiElementTool } from "../src/tools/await-ui-element";
 import { createAwaitScreenIdleTool } from "../src/tools/await-screen-idle";
 import { __primeDepCacheForTests, __resetDepCacheForTests } from "../src/utils/check-deps";
 
+vi.mock("../src/utils/harmony-flag", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/utils/harmony-flag")>()),
+  isHarmonyEnabled: () => true,
+}));
+
 // The transport is stubbed, so the real dump parser and hint rules run.
 vi.mock("../src/utils/harmony-uitest", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/utils/harmony-uitest")>()),
@@ -326,6 +331,27 @@ describe("await-ui-element on HarmonyOS", () => {
         selector: { text: "Submit" },
         timeoutMs: 600,
         pollIntervalMs: 100,
+      }
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.cause).toBe("unmet");
+  });
+
+  it("times out a `hidden` wait `unmet` when the deadline poll gets no budget", async () => {
+    // Reads at 0/400/800ms, then the loop sleeps 200ms and polls again at the
+    // deadline with nothing left; every read saw the element.
+    sequenceDumps([dumpWith("Spinner")]);
+    const tool = createAwaitUiElementTool(harmonyRegistry());
+
+    const result = await tool.execute(
+      {},
+      {
+        udid: HARMONY_ID,
+        condition: "hidden",
+        selector: { text: "Spinner" },
+        timeoutMs: 1000,
+        pollIntervalMs: 400,
       }
     );
 

@@ -10,6 +10,7 @@ import {
   assertHarmonyDisplayReady,
   harmonyDisplay,
   holdUitestQueue,
+  HARMONY_DISPLAY_TIMEOUT_MS,
   remainingBudget,
 } from "../../utils/harmony-uitest";
 import { UnsupportedOperationError } from "../../utils/capability";
@@ -181,7 +182,10 @@ Fails if the device backend is not reachable — the simulator-server for iOS, \
             assertHarmonyDisplayReady(
               await harmonyDisplay(
                 connectKey,
-                remainingBudget(connectKey, deadline, "the display re-read")
+                Math.min(
+                  HARMONY_DISPLAY_TIMEOUT_MS,
+                  remainingBudget(connectKey, deadline, "the display re-read")
+                )
               ),
               `press ${params.button}`
             );

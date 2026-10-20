@@ -1,4 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// HarmonyOS is behind the `harmonyos` flag; these cases drive it with the flag on.
+vi.mock("../src/utils/harmony-flag", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/utils/harmony-flag")>()),
+  isHarmonyEnabled: () => true,
+}));
 import { __primeDepCacheForTests, __resetDepCacheForTests } from "../src/utils/check-deps";
 
 // Other harmony tests call the backends directly, so they never exercise the

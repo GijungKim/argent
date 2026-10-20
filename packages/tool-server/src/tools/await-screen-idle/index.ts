@@ -19,7 +19,7 @@ import { describeIos, iosRequires } from "../describe/platforms/ios";
 import { describeIosDevice } from "../describe/platforms/ios-device";
 import { describeAndroid, androidRequires } from "../describe/platforms/android";
 import { describeChromium } from "../describe/platforms/chromium";
-import { describeHarmony, harmonyRequires } from "../describe/platforms/harmony";
+import { pollHarmonyTree, harmonyRequires } from "../describe/platforms/harmony";
 
 const AWAIT_SCREEN_IDLE_TOOL_ID = "await-screen-idle";
 
@@ -122,7 +122,7 @@ export function createAwaitScreenIdleTool(registry: Registry): ToolDefinition<Pa
       return describeAndroid(registry, device.id, undefined, androidIsTv);
     }
     if (device.platform === "harmony") {
-      return describeHarmony(harmonyConnectKey(device.id), budgetMs);
+      return pollHarmonyTree(harmonyConnectKey(device.id), budgetMs);
     }
     return describeChromium(services.chromium as ChromiumCdpApi);
   }

@@ -139,12 +139,16 @@ export async function harmonyDisplay(
     "hidumper -s RenderService -a screen",
     timeoutMs
   );
-  // Both fields from the same `screen[N]:` line, so a foldable's sleeping half
-  // does not refuse input on the awake one:
+  // Both fields from the same `screen[N]:` line, preferring an awake one, so a
+  // foldable's sleeping half does not refuse input on the awake one:
   //   screen[0]: id=0, powerStatus=POWER_STATUS_ON, ..., render resolution=1320x2856, ...
-  const screen = stdout
+  const screens = stdout
     .split("\n")
-    .find((line) => /^\s*screen\[\d+\]:/.test(line) && /render resolution=\d+x\d+/.test(line));
+    .filter((line) => /^\s*screen\[\d+\]:/.test(line) && /render resolution=\d+x\d+/.test(line));
+  const screen =
+    screens.find((line) =>
+      INTERACTIVE_POWER_STATUS.has(/powerStatus=(\w+)/.exec(line)?.[1] ?? "")
+    ) ?? screens[0];
   const res = screen ? /render resolution=(\d+)x(\d+)/.exec(screen) : null;
   const power = screen ? /powerStatus=(\w+)/.exec(screen) : null;
   // Both or neither: an unparsed power state must not default to "on".

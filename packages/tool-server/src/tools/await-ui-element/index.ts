@@ -21,7 +21,7 @@ import { describeIosDevice } from "../describe/platforms/ios-device";
 import { describeAndroid, androidRequires } from "../describe/platforms/android";
 import { describeChromium } from "../describe/platforms/chromium";
 import { describeVega, vegaRequires } from "../describe/platforms/vega";
-import { describeHarmony, harmonyRequires } from "../describe/platforms/harmony";
+import { pollHarmonyTree, harmonyRequires } from "../describe/platforms/harmony";
 import {
   selectorSchema,
   nodeText,
@@ -347,7 +347,7 @@ export function createAwaitUiElementTool(registry: Registry): ToolDefinition<Par
       return describeVega(device.id);
     }
     if (device.platform === "harmony") {
-      return describeHarmony(harmonyConnectKey(device.id), budgetMs);
+      return pollHarmonyTree(harmonyConnectKey(device.id), budgetMs);
     }
     return describeChromium(services.chromium as ChromiumCdpApi);
   }

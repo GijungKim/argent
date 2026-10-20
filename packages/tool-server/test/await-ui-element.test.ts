@@ -884,8 +884,7 @@ describe("await-ui-element tool", () => {
       }
     );
 
-    // A failure at the deadline has no budget left, so it may not reach the note.
-    expect(result.success).toBe(false);
+    expect(result.note).toMatch(/last tree fetch failed/i);
     expect(unmetUiWaitCause(result)).toBe("unmet");
   });
 

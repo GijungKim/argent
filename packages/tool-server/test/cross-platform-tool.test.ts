@@ -1,4 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+
+// HarmonyOS is behind the `harmonyos` flag; these cases drive it with the flag on.
+vi.mock("../src/utils/harmony-flag", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/utils/harmony-flag")>()),
+  isHarmonyEnabled: () => true,
+}));
 import { dispatchByPlatform, type PlatformImpl } from "../src/utils/cross-platform-tool";
 import { __resetDepCacheForTests, __primeDepCacheForTests } from "../src/utils/check-deps";
 import { NotImplementedOnPlatformError, UnsupportedOperationError } from "../src/utils/capability";

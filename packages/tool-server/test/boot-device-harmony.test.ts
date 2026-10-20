@@ -3,6 +3,12 @@ import { existsSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+// HarmonyOS is behind the `harmonyos` flag; these cases drive it with the flag on.
+vi.mock("../src/utils/harmony-flag", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/utils/harmony-flag")>()),
+  isHarmonyEnabled: () => true,
+}));
 import { FAILURE_CODES, FailureError, getFailureSignal, type Registry } from "@argent/registry";
 
 const runHarmonyEmulator = vi.fn();
@@ -479,7 +485,7 @@ describe("boot-device — HarmonyOS emulator path", () => {
     const startedAt = Date.now();
     const pending = boot({ bootTimeoutMs: 30_000 });
     const settled = expect(pending).resolves.toMatchObject({
-      note: expect.stringMatching(/bootTimeoutMs/),
+      note: expect.stringMatching(/keeps booting/),
     });
     await vi.advanceTimersByTimeAsync(40_000);
     await settled;
@@ -793,7 +799,7 @@ describe("boot-device — HarmonyOS emulator path", () => {
 
     expect(spawnMock).toHaveBeenCalled();
     expect(result.udid).toBe(`harmony-emulator-${INSTANCE}`);
-    expect(result.note).toMatch(/bootTimeoutMs/);
+    expect(result.note).toMatch(/keeps booting/);
   });
 
   it("blames the missing connector instead of waiting out the budget for it", async () => {

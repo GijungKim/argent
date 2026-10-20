@@ -25,6 +25,16 @@ const EMPTY_HINT =
   "call describe again, or screenshot to see what is on screen.";
 
 /**
+ * The wait tools' fetcher. Their last poll lands on the deadline with no
+ * budget, where any other backend's read is abandoned as unsettled; refusing
+ * here instead would read as a failed fetch.
+ */
+export function pollHarmonyTree(connectKey: string, budgetMs: number): Promise<DescribeTreeData> {
+  if (budgetMs <= 0) return new Promise(() => {});
+  return describeHarmony(connectKey, budgetMs);
+}
+
+/**
  * `timeoutMs` bounds the whole read: an abandoned `uitest` client holds the
  * device's queue until killed, which charges the caller's next call.
  */

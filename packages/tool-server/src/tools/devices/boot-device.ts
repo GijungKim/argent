@@ -1423,9 +1423,8 @@ const HARMONY_ALREADY_RUNNING =
 
 const HARMONY_NO_TARGET =
   "The instance started but had not registered with `hdc` before the boot budget ran out, so " +
-  "this payload names the instance rather than a connect key. Give it longer with " +
-  "`bootTimeoutMs`, or call `list-devices` once it finishes booting and drive the `kind: " +
-  '"device"` entry that appears.';
+  "this payload names the instance rather than a connect key. It keeps booting: call " +
+  '`list-devices` once it finishes and drive the `kind: "device"` entry that appears.';
 
 const HARMONY_AMBIGUOUS_TARGET =
   "More than one `hdc` target registered while the instance was booting, so argent could not " +
@@ -1441,8 +1440,8 @@ const HARMONY_UNPROBEABLE_TARGET =
   "A target registered while the instance was booting but never reported a display argent could " +
   "read, so it could not tell whether the target is this instance or another device that " +
   "reconnected, and did not guess. A guest that has not finished compositing reads this way too, " +
-  'so call `list-devices` and drive the `kind: "device"` entry for the instance, or give the ' +
-  "boot longer with `bootTimeoutMs`.";
+  'so call `list-devices` once it finishes booting and drive the `kind: "device"` entry for ' +
+  "the instance.";
 
 const HARMONY_UNCONFIRMED_TARGET =
   "argent had no panel on record for this instance, so it could not check the target it returned " +
@@ -1453,7 +1452,7 @@ const HARMONY_UNCONFIRMED_TARGET =
 const HARMONY_NOT_DRIVABLE =
   "The instance registered with `hdc` but had not answered `uitest` before the boot budget " +
   "ran out, so `describe`, `screenshot` and the gesture tools may fail for a little longer. " +
-  "Retry the first interaction, or give the boot longer with `bootTimeoutMs`.";
+  "Retry the first interaction.";
 
 const HARMONY_UNLISTABLE_TARGETS =
   "`hdc list targets` failed every time argent asked while the instance was booting, so it could " +

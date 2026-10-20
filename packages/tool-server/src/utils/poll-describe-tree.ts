@@ -71,9 +71,6 @@ export async function pollDescribeTree<R>(
     if (signal?.aborted) return outcome(undefined, true);
 
     const remaining = Math.max(0, deadline - Date.now());
-    // The final poll runs at the deadline with no budget; its refusal must not
-    // displace what earlier polls found.
-    const unbudgeted = remaining === 0;
     const settled = await settleWithin(fetchTree(remaining), remaining, signal);
     polls += 1;
 
@@ -90,7 +87,7 @@ export async function pollDescribeTree<R>(
       break;
     }
     if (settled.type === "error") {
-      if (!unbudgeted || (lastError === undefined && lastData === null)) lastError = settled.error;
+      lastError = settled.error;
     } else {
       lastData = settled.value;
       lastError = undefined;

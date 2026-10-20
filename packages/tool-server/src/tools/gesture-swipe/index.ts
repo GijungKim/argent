@@ -10,6 +10,7 @@ import {
   assertHarmonyDisplayReady,
   harmonyDisplay,
   holdUitestQueue,
+  HARMONY_DISPLAY_TIMEOUT_MS,
   remainingBudget,
   toDevicePoint,
 } from "../../utils/harmony-uitest";
@@ -170,7 +171,10 @@ Pass momentum:false for a momentum-free swipe that lands where the finger lifts 
           // Re-read: the geometry of a foldable may have changed while queued.
           const live = await harmonyDisplay(
             connectKey,
-            remainingBudget(connectKey, deadline, "the display re-read")
+            Math.min(
+              HARMONY_DISPLAY_TIMEOUT_MS,
+              remainingBudget(connectKey, deadline, "the display re-read")
+            )
           );
           assertHarmonyDisplayReady(live, "swipe");
           const fromPx = toDevicePoint(params.fromX, params.fromY, live);

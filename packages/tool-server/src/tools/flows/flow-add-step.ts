@@ -524,6 +524,13 @@ async function probeAgainstRunnerTree(
     return {};
   }
   if (typeof args.udid !== "string") return {}; // nothing to probe against
+  if (!hasRunnerTree(args.udid)) {
+    return {
+      warning:
+        `this platform's e2e runner has no UI tree, so an \`await:\`/\`assert:\` conversion of ` +
+        `this step always fails there; keep it as a \`tool:\` step.`,
+    };
+  }
   // No try/catch: a tree read that fails throws inside `fetchFlowTree`, which
   // the probe already reports as indeterminate.
   const device = resolveDevice(args.udid);
@@ -585,15 +592,12 @@ async function probeAgainstRunnerTree(
         `reads and nothing else. Whether it would convert to \`await:\`/\`assert:\` is UNKNOWN, ` +
         `not known-bad — ` +
         // A timeout and an outage need different next moves: "once that tree
-        // source is back" is nonsense for a source that never left, and for one
-        // that never existed.
+        // source is back" is nonsense for a source that never left.
         (timedOut
           ? `re-record this step when the device is quieter, or settle the conversion directly by ` +
             `putting the directive in an e2e test and running \`e2e-execute\`, which has no such ` +
             `ceiling`
-          : (hasRunnerTree(args.udid)
-              ? `re-probe once that tree source is back before trusting the conversion`
-              : `this platform's runner has no tree to probe, so the conversion stays unverified`) +
+          : `re-probe once that tree source is back before trusting the conversion` +
             indeterminateReasonCaveat(args.udid)),
     };
   }

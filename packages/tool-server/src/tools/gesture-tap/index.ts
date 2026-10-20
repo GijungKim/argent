@@ -12,6 +12,7 @@ import {
   assertHarmonyDisplayReady,
   harmonyDisplay,
   holdUitestQueue,
+  HARMONY_DISPLAY_TIMEOUT_MS,
   remainingBudget,
   toDevicePoint,
 } from "../../utils/harmony-uitest";
@@ -128,7 +129,10 @@ async function tapHarmony(
     async (ui) => {
       const live = await harmonyDisplay(
         connectKey,
-        remainingBudget(connectKey, deadline, "the display re-read")
+        Math.min(
+          HARMONY_DISPLAY_TIMEOUT_MS,
+          remainingBudget(connectKey, deadline, "the display re-read")
+        )
       );
       assertHarmonyDisplayReady(live, "tap");
       const point = toDevicePoint(x, y, live);

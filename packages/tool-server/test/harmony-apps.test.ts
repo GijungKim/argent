@@ -1,4 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// HarmonyOS is behind the `harmonyos` flag; these cases drive it with the flag on.
+vi.mock("../src/utils/harmony-flag", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/utils/harmony-flag")>()),
+  isHarmonyEnabled: () => true,
+}));
 import { getFailureSignal, type DeviceInfo } from "@argent/registry";
 import { runHdcShell as realRunHdcShell } from "../src/utils/harmony-hdc";
 import {

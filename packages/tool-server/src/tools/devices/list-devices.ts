@@ -446,27 +446,23 @@ Booted/ready devices are listed first. Platforms whose CLI is unavailable are si
     androidDeduped.sort(sortAndroid);
 
     const harmonyTagged: HarmonyDevice[] = [
-      ...harmonyTargets.map(
-        (t): HarmonyDevice => ({
-          platform: "harmony",
-          udid: harmonyDeviceId(t.connectKey),
-          name: t.connectKey,
-          kind: "device",
-          state: t.state,
-          connection: t.connection,
-        })
-      ),
-      ...harmony.map(
-        (h): HarmonyDevice => ({
-          platform: "harmony",
-          udid: harmonyEmulatorId(h.name),
-          name: h.name,
-          kind: "emulator",
-          state: h.running ? "running" : "stopped",
-          deviceType: h.deviceType,
-          osVersion: h.osVersion,
-        })
-      ),
+      ...harmonyTargets.map((t): HarmonyDevice => ({
+        platform: "harmony",
+        udid: harmonyDeviceId(t.connectKey),
+        name: t.connectKey,
+        kind: "device",
+        state: t.state,
+        connection: t.connection,
+      })),
+      ...harmony.map((h): HarmonyDevice => ({
+        platform: "harmony",
+        udid: harmonyEmulatorId(h.name),
+        name: h.name,
+        kind: "emulator",
+        state: h.running ? "running" : "stopped",
+        deviceType: h.deviceType,
+        osVersion: h.osVersion,
+      })),
     ];
 
     const devices: ListedDevice[] = [

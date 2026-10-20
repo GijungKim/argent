@@ -132,7 +132,12 @@ export function assertSupported(
   }
   const supported = matrix[device.kind] === true;
   if (!supported) {
-    throw new UnsupportedOperationError(toolId, device, `kind '${device.kind}' not supported`);
+    const reason =
+      device.platform === "harmony" && device.kind === "emulator"
+        ? "a `harmony-emulator-` id names an instance only boot-device starts; drive the " +
+          '`harmony-<connectKey>` id of its `kind: "device"` entry in list-devices'
+        : `kind '${device.kind}' not supported`;
+    throw new UnsupportedOperationError(toolId, device, reason);
   }
   if (capability.supports && !capability.supports(device)) {
     throw new UnsupportedOperationError(toolId, device, "supports() refiner rejected device");

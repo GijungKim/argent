@@ -1,5 +1,11 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 
+// HarmonyOS is behind the `harmonyos` flag; these cases drive it with the flag on.
+vi.mock("../src/utils/harmony-flag", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/utils/harmony-flag")>()),
+  isHarmonyEnabled: () => true,
+}));
+
 // Keep the real module (blueprints import from it too) but neutralise the
 // fire-and-forget WebSocket send so no real socket is opened during the test.
 vi.mock("../src/utils/simulator-client", async (importOriginal) => ({
