@@ -14,7 +14,7 @@ Argent drives a growing set of targets through a single toolkit, each with the r
 | **Android**       | Emulators (AVDs) and physical devices over adb                          | Touch / gesture  |
 | **TV**            | Apple TV (tvOS), Android TV / Google TV, Amazon Fire TV (Vega)          | D-pad / remote   |
 | **Desktop & web** | Electron and Chromium apps (incl. React Native Web / Expo web) over CDP | Mouse / keyboard |
-| **HarmonyOS**     | Phones over `hdc`, and DevEco Studio emulator instances                 | Touch / gesture  |
+| **HarmonyOS**     | Phones over `hdc`, and DevEco Studio emulator instances (experimental)  | Touch / gesture  |
 
 <Video
   src="/video/ios-android-web.mp4"
@@ -43,6 +43,8 @@ Argent drives the iPhone Duo simulator closed, half-open and open. The agent fol
 Argent also drives a physical iPhone over a USB cable. Physical iPads are not supported yet. Automation on hardware is scoped to one app at a time, and a subset of the simulator tools is available. See [Physical iOS devices](/docs/features/physical-ios-devices).
 
 ### HarmonyOS
+
+HarmonyOS support is experimental and off by default. Run `argent enable harmonyos` to turn it on. While the flag is off, `list-devices` shows no HarmonyOS target and Argent refuses every `harmony-` id. See [Feature flags](/docs/reference/configuration#feature-flags).
 
 Argent drives any HarmonyOS phone or emulator that `hdc` is connected to. A phone with USB debugging enabled appears as `harmony-<connectKey>`. A DevEco Studio emulator instance appears as `harmony-emulator-<name>`. `boot-device` starts the instance and returns its `harmony-<connectKey>` id, so the same tools drive a phone and an emulator.
 
