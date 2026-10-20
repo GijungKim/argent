@@ -25,7 +25,7 @@ const zodSchema = z.object({
   udid: z
     .string()
     .describe(
-      "Target device id from `list-devices` (iOS UDID, Android serial, HarmonyOS id, or Chromium id)."
+      "Target device id from `list-devices` (iOS UDID, Android serial, <flag:harmonyos>HarmonyOS id, </flag:harmonyos>or Chromium id)."
     ),
   x: z.number().describe("Normalized horizontal position 0.0–1.0 (left=0, right=1), not pixels"),
   y: z.number().describe("Normalized vertical position 0.0–1.0 (top=0, bottom=1), not pixels"),
@@ -39,8 +39,8 @@ const zodSchema = z.object({
       "Number of taps/clicks dispatched as ONE multi-tap gesture (2 = double-tap / double-click). " +
         "The taps land inside the OS double-tap window; on Chromium each click carries an escalating " +
         "CDP clickCount so dblclick actually fires; on physical iOS 2 is the native double-tap and " +
-        "higher counts land as separate taps. On HarmonyOS only 2 is one gesture — 3 or more are " +
-        "separate injections a device round trip apart, which the OS reads as single taps. Default 1."
+        "higher counts land as separate taps. <flag:harmonyos>On HarmonyOS only 2 is one gesture — 3 or more are " +
+        "separate injections a device round trip apart, which the OS reads as single taps. </flag:harmonyos>Default 1."
     ),
 });
 
@@ -157,13 +157,13 @@ export const gestureTapTool: ToolDefinition<Params, Result> = {
     failedMsg: ({ params, failureSignal }) =>
       `Failed to tap at (${Math.round(params.x * 100)}%, ${Math.round(params.y * 100)}%): ${failureSignal.error_code}`,
   },
-  description: `Press the device screen (iOS simulator or physical device, Android emulator, HarmonyOS device, or Chromium app) at normalized coordinates: x and y are fractions of screen width and height in 0.0–1.0 (not pixels).
+  description: `Press the device screen (iOS simulator or physical device, Android emulator, <flag:harmonyos>HarmonyOS device, </flag:harmonyos>or Chromium app) at normalized coordinates: x and y are fractions of screen width and height in 0.0–1.0 (not pixels).
 Sends a Down event followed by an Up event at the same point. For Chromium, this dispatches a CDP mouse-press/release on the renderer.
 Set clickCount: 2 for a double-tap / double-click: the taps are dispatched as one gesture with proper click counting, which two separate tap calls cannot guarantee.
 Use when you need to tap a button, link, or any tappable element on the screen.
-Returns { tapped: true, timestampMs }. On physical iOS, reactivated: true = app was re-fronted; re-describe. Fails if the simulator-server / emulator backend / Chromium CDP / \`hdc\` is not reachable for the given device.
+Returns { tapped: true, timestampMs }. On physical iOS, reactivated: true = app was re-fronted; re-describe. Fails if the simulator-server / emulator backend / Chromium CDP <flag:harmonyos>/ \`hdc\` </flag:harmonyos>is not reachable for the given device.
 On a physical iPhone use \`describe\`; \`native-describe-screen\` is simulator-only.
-Before tapping, determine the correct coordinates by using discovery tools. Pick by platform: iOS / Android use \`describe\`, \`native-describe-screen\`, or \`debugger-component-tree\`; Chromium uses \`describe\` (the DOM walker) and HarmonyOS uses \`describe\` (the \`uitest\` layout dump), since the native and RN-specific discovery tools don't apply to either. More information in \`argent-device-interact\` skill`,
+Before tapping, determine the correct coordinates by using discovery tools. Pick by platform: iOS / Android use \`describe\`, \`native-describe-screen\`, or \`debugger-component-tree\`; Chromium uses \`describe\` (the DOM walker)<flag:harmonyos> and HarmonyOS uses \`describe\` (the \`uitest\` layout dump)</flag:harmonyos>, since the native and RN-specific discovery tools don't apply<flag:harmonyos> to either</flag:harmonyos>. More information in \`argent-device-interact\` skill`,
   alwaysLoad: true,
   searchHint: "tap press button element device simulator emulator chromium touch down up click",
   zodSchema,

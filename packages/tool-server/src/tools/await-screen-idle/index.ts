@@ -33,7 +33,7 @@ const zodSchema = z
       .string()
       .min(1)
       .describe(
-        "Target device id from `list-devices` (iOS UDID, Android serial, HarmonyOS id, or Chromium id)."
+        "Target device id from `list-devices` (iOS UDID, Android serial, <flag:harmonyos>HarmonyOS id, </flag:harmonyos>or Chromium id)."
       ),
     timeoutMs: z
       .number()
@@ -140,10 +140,10 @@ export function createAwaitScreenIdleTool(registry: Registry): ToolDefinition<Pa
 
 Polls the same accessibility / DOM tree as \`describe\` every pollIntervalMs (default ${DEFAULT_POLL_INTERVAL_MS}ms) until it
 has content and that content holds identical for minStableMs (default ${DEFAULT_MIN_STABLE_MS}ms), or timeoutMs (default
-${DEFAULT_TIMEOUT_MS}ms) is reached. Returns { settled, waitedMs, polls, note? }; settled=false means the screen never went
-still before the timeout. A note on settled=true means the screen it settled on is not live: a suspended HarmonyOS
+${DEFAULT_TIMEOUT_MS}ms) is reached. Returns { settled, waitedMs, polls<flag:harmonyos>, note?</flag:harmonyos> }; settled=false means the screen never went
+still before the timeout. <flag:harmonyos>A note on settled=true means the screen it settled on is not live: a suspended HarmonyOS
 panel settles instantly on its last frame, and taps land nowhere until it is woken.
-Use after a launch/navigation to wait for the UI to render before screenshotting or tapping.`,
+</flag:harmonyos>Use after a launch/navigation to wait for the UI to render before screenshotting or tapping.`,
     searchHint:
       "wait until screen settles idle stable stops changing animation transition rendered ready before screenshot",
     longRunning: true,

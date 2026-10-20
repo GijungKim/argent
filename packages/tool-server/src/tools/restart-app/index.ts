@@ -25,18 +25,22 @@ const zodSchema = z.object({
   udid: z
     .string()
     .min(1)
-    .describe("Target device id from `list-devices` (iOS UDID, Android serial, or HarmonyOS id)."),
+    .describe(
+      "Target device id from `list-devices` (iOS UDID<flag:harmonyos>, HarmonyOS id,</flag:harmonyos> or Android serial)."
+    ),
   bundleId: z
     .string()
     .min(1)
     .regex(BUNDLE_ID_PATTERN, BUNDLE_ID_MESSAGE)
-    .describe("App identifier. iOS: bundle id. Android: package name. HarmonyOS: bundle name."),
+    .describe(
+      "App identifier. iOS: bundle id. Android: package name.<flag:harmonyos> HarmonyOS: bundle name.</flag:harmonyos>"
+    ),
   activity: z
     .string()
     .regex(ACTIVITY_PATTERN, "activity may only contain letters, digits, '.', '_', '-' and '/'")
     .optional()
     .describe(
-      "Android-only: relaunch a non-launcher Activity (e.g. `.SettingsActivity` or `com.example/com.example.SettingsActivity`). If omitted, the app's default launcher activity is used. Ignored on iOS / HarmonyOS."
+      "Android-only: relaunch a non-launcher Activity (e.g. `.SettingsActivity` or `com.example/com.example.SettingsActivity`). If omitted, the app's default launcher activity is used. Ignored on iOS<flag:harmonyos> / HarmonyOS</flag:harmonyos>."
     ),
   launchArgs: z
     .array(z.string())
@@ -68,12 +72,12 @@ export function createRestartAppTool(registry: Registry): ToolDefinition<Params,
       failedMsg: ({ params, failureSignal }) =>
         `Failed to restart ${params.bundleId}: ${failureSignal.error_code}`,
     },
-    description: `Terminate then relaunch an app by its bundle id (iOS, HarmonyOS, Vega) or package name (Android).
+    description: `Terminate then relaunch an app by its bundle id (iOS, <flag:harmonyos>HarmonyOS, </flag:harmonyos>Vega) or package name (Android).
 Use when you need a clean in-memory state without a full reinstall. Also refreshes the native-devtools injection before the relaunch (the iOS slice on iOS, the tvOS slice on Apple TV); on tvOS, interaction is focus-driven; use the tv-* tools rather than coordinate taps.
 Returns { restarted, bundleId }. Fails if the app is not installed.`,
     alwaysLoad: true,
     searchHint:
-      "terminate relaunch restart reset app bundle id package simulator emulator vega tvos fire tv harmony harmonyos",
+      "terminate relaunch restart reset app bundle id package simulator emulator vega tvos fire tv<flag:harmonyos> harmony harmonyos</flag:harmonyos>",
     zodSchema,
     capability,
     // Only ios-remote's handler reads `services.nativeDevtools`, so only it

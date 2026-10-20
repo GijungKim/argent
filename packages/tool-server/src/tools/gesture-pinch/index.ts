@@ -18,7 +18,9 @@ import { sleep } from "../../utils/timing";
 const zodSchema = z.object({
   udid: z
     .string()
-    .describe("Target device id from `list-devices` (iOS UDID, Android serial, or HarmonyOS id)."),
+    .describe(
+      "Target device id from `list-devices` (iOS UDID<flag:harmonyos>, HarmonyOS id,</flag:harmonyos> or Android serial)."
+    ),
   centerX: z
     .number()
     .describe(
@@ -66,7 +68,7 @@ const zodSchema = z.object({
     .number()
     .optional()
     .describe(
-      "Total gesture duration in milliseconds (default 300). On HarmonyOS the device runs the whole move itself and takes this as wall-clock time, clamped to the 1–15000ms range `uinput` accepts."
+      "Total gesture duration in milliseconds (default 300)<flag:harmonyos>. On HarmonyOS the device runs the whole move itself and takes this as wall-clock time, clamped to the 1–15000ms range `uinput` accepts.</flag:harmonyos>"
     ),
 });
 
@@ -120,8 +122,8 @@ export const gesturePinchTool: ToolDefinition<Params, Result> = {
   description: `Execute a pinch-to-zoom gesture by moving two fingers toward or away from a center point to change the scale of on-screen content. All positions and distances are normalized 0.0–1.0 (fractions of screen width/height, not pixels), same coordinate space as gesture-tap and gesture-swipe.
 startDistance > endDistance = pinch in (zoom out). startDistance < endDistance = pinch out (zoom in).
 Typical values: startDistance 0.2, endDistance 0.6 for a zoom-in pinch at screen center.
-Auto-generates interpolated frames at ~60fps on iOS and Android; HarmonyOS takes both fingers' endpoints in one call and interpolates them on-device. The angle parameter controls the axis (0 = horizontal, 90 = vertical). Optional endCenterX/endCenterY drift the centroid linearly over the gesture (omitted = fixed center).
-Use when you need to zoom in or out on a map, image, or zoomable view. Returns { pinched: true, timestampMs }. Fails if the simulator-server / emulator backend, or \`hdc\` on HarmonyOS, is not reachable for the given device.`,
+Auto-generates interpolated frames at ~60fps<flag:harmonyos> on iOS and Android; HarmonyOS takes both fingers' endpoints in one call and interpolates them on-device</flag:harmonyos>. The angle parameter controls the axis (0 = horizontal, 90 = vertical). Optional endCenterX/endCenterY drift the centroid linearly over the gesture (omitted = fixed center).
+Use when you need to zoom in or out on a map, image, or zoomable view. Returns { pinched: true, timestampMs }. Fails if the simulator-server / emulator backend<flag:harmonyos>, or \`hdc\` on HarmonyOS,</flag:harmonyos> is not reachable for the given device.`,
   zodSchema,
   capability,
   services: (params): Record<string, ServiceRef> => {
