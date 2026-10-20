@@ -149,4 +149,61 @@ describe("harmonyDisplay", () => {
       /Could not read the display size and power state/
     );
   });
+
+  describe("in landscape", () => {
+    /** The display manager's session for one screen, trimmed from a 6.1.1 emulator showing a fullscreen video. */
+    function dmsScreen(screenId: number, rsScreenId: number, rotation: number): string {
+      const [w, h] = rotation % 180 === 90 ? [2856, 1320] : [1320, 2856];
+      return [
+        `---------------- Screen ID: ${screenId} ----------------`,
+        "[SCREEN SESSION]",
+        `RSScreenId:                   ${rsScreenId}`,
+        "activeModes<id, W, H, RS>:    0, 1320, 2856, 60",
+        `Rotation:                     ${rotation / 90}`,
+        "[SCREEN PROPERTY]",
+        `Rotation:                     ${rotation}`,
+        `ScreenRotation:               ${rotation}`,
+        `Bounds<L,T,W,H>:              0, 0, ${w}, ${h}, `,
+        "PhyBounds<L,T,W,H>:           0, 0, 1320, 2856, ",
+      ].join("\r\n");
+    }
+    const DMS_HEADER = [
+      "----------------------------------DisplayManagerService----------------------------------",
+      "-------------- DMS KEY EVENTS LIST  --------------",
+      "[10-21 00:06:40.457]: screenId: 0 rotation: 270 width: 2856 height: 1320 type: ROTATION_BEGIN",
+    ].join("\n");
+
+    it("swaps the panel's portrait resolution into the rotated space taps and layout bounds use", async () => {
+      answer(`${dump(AWAKE)}\n${DMS_HEADER}\n${dmsScreen(0, 0, 270)}\n`);
+
+      await expect(harmonyDisplay(CONNECT_KEY)).resolves.toEqual({
+        width: 2856,
+        height: 1320,
+        screenOn: true,
+      });
+      expect(runHdcShell.mock.calls[0]?.[1]).toContain("hidumper -s DisplayManagerService -a -a");
+    });
+
+    it("keeps an upside-down display's size", async () => {
+      answer(`${dump(AWAKE)}\n${DMS_HEADER}\n${dmsScreen(0, 0, 180)}\n`);
+
+      await expect(harmonyDisplay(CONNECT_KEY)).resolves.toMatchObject({
+        width: 1320,
+        height: 2856,
+      });
+    });
+
+    it("reads the rotation of the screen whose size it reports", async () => {
+      // A foldable: the suspended outer screen is listed first and rotated, the awake one is not.
+      answer(
+        `${dump(screenLine(0, "POWER_STATUS_OFF", "1080x2504"), screenLine(1, "POWER_STATUS_ON", "1320x2856"))}\n` +
+          `${DMS_HEADER}\n${dmsScreen(0, 0, 90)}\n${dmsScreen(5, 1, 0)}\n`
+      );
+
+      await expect(harmonyDisplay(CONNECT_KEY)).resolves.toMatchObject({
+        width: 1320,
+        height: 2856,
+      });
+    });
+  });
 });

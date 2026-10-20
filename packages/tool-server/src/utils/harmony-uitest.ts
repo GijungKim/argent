@@ -127,8 +127,9 @@ interface HarmonyDisplay {
 const INTERACTIVE_POWER_STATUS = new Set(["POWER_STATUS_ON", "POWER_STATUS_ON_ADVANCED"]);
 
 /**
- * Display geometry and power state from the render service. Not cached: a
- * foldable's resolution changes with the fold, and power with any timeout.
+ * Display geometry, in the rotated space `uitest` coordinates and layout bounds
+ * use, and power state. Not cached: a foldable's resolution changes with the
+ * fold, power with any timeout, and orientation with the foreground app.
  */
 export async function harmonyDisplay(
   connectKey: string,
@@ -136,7 +137,7 @@ export async function harmonyDisplay(
 ): Promise<HarmonyDisplay> {
   const { stdout } = await runHdcShell(
     connectKey,
-    "hidumper -s RenderService -a screen",
+    "hidumper -s RenderService -a screen; hidumper -s DisplayManagerService -a -a",
     timeoutMs
   );
   // Both fields from the same `screen[N]:` line, preferring an awake one, so a
@@ -164,11 +165,27 @@ export async function harmonyDisplay(
       }
     );
   }
+  const width = Number.parseInt(res[1], 10);
+  const height = Number.parseInt(res[2], 10);
+  // The render resolution is the panel's mode, and stays portrait in landscape.
+  const quarterTurn = screenRotation(stdout, /\bid=(\d+)/.exec(screen!)?.[1]) % 180 === 90;
   return {
-    width: Number.parseInt(res[1], 10),
-    height: Number.parseInt(res[2], 10),
+    width: quarterTurn ? height : width,
+    height: quarterTurn ? width : height,
     screenOn: INTERACTIVE_POWER_STATUS.has(power[1]),
   };
+}
+
+/**
+ * Degrees the display is rotated from the panel, from the display manager's
+ * session for render-service screen `rsScreenId`; 0 when it names none.
+ */
+function screenRotation(stdout: string, rsScreenId: string | undefined): number {
+  for (const section of stdout.split(/^-+ Screen ID: \d+ -+\s*$/m).slice(1)) {
+    if (/^RSScreenId:\s+(\d+)/m.exec(section)?.[1] !== rsScreenId) continue;
+    return Number.parseInt(/^ScreenRotation:\s+(\d+)/m.exec(section)?.[1] ?? "0", 10);
+  }
+  return 0;
 }
 
 /**
