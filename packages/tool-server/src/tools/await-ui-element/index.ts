@@ -99,7 +99,7 @@ const zodSchema = z
       .string()
       .min(1)
       .describe(
-        "Target device id from `list-devices` (iOS UDID, Android serial, HarmonyOS id, or Chromium id)."
+        "Target device id from `list-devices` (iOS UDID, Android serial, <flag:harmonyos>HarmonyOS id, </flag:harmonyos>or Chromium id)."
       ),
     condition: z
       .enum(["exists", "visible", "hidden", "text"])
@@ -378,14 +378,14 @@ case-insensitive substrings of the element's label/value and role; identifier ma
 also accepting the unqualified Android resource-id name ('submit' matches 'com.example.app:id/submit').
 It polls the same accessibility / DOM tree as \`describe\`
 (iOS simulator AXRuntime, physical-iOS runner snapshot, Android uiautomator, Chromium CDP,
-Vega automation toolkit, HarmonyOS \`uitest dumpLayout\`) every pollIntervalMs
+Vega automation toolkit<flag:harmonyos>, HarmonyOS \`uitest dumpLayout\`</flag:harmonyos>) every pollIntervalMs
 (default ${DEFAULT_POLL_INTERVAL_MS}ms) until timeoutMs (default ${DEFAULT_TIMEOUT_MS}ms).
 
 Returns { success: boolean, elapsed: number, note?, cause? }. success=false means the wait ended without the
 condition holding, which is not always a verdict on the condition: \`cause\` says which it was: \`unmet\` (the tree
 was read and the condition was false there), \`unreadable\` (no trustworthy read, so nothing was judged) or
-\`cancelled\`. \`note\` describes what was seen. Only \`unmet\` licenses rewriting the check. A \`note\` on
-success=true can also say the tree was read off a suspended HarmonyOS panel, which is not the live screen. Use this
+\`cancelled\`. \`note\` describes what was seen. Only \`unmet\` licenses rewriting the check. <flag:harmonyos>A \`note\` on
+success=true can also say the tree was read off a suspended HarmonyOS panel, which is not the live screen. </flag:harmonyos>Use this
 after a tap/navigation to wait for the next screen, or before tapping an element that appears asynchronously.`,
     alwaysLoad: true,
     searchHint:

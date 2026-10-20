@@ -38,7 +38,7 @@ const zodSchema = z.object({
     .string()
     .min(1)
     .describe(
-      "Target device id from `list-devices` (iOS UDID, Android serial, Vega serial, HarmonyOS id, or Chromium id)."
+      "Target device id from `list-devices` (iOS UDID, Android serial, Vega serial, <flag:harmonyos>HarmonyOS id, </flag:harmonyos>or Chromium id)."
     ),
   bundleId: z
     .string()
@@ -165,14 +165,14 @@ role, accessible name, and bounding rect (normalized to 0–1).
 On Vega (Fire TV), reads the on-device automation toolkit (\`getPageSource\`); each element carries
 \`[focused]\`/\`[selected]\` so you can see where the D-pad cursor is, then move it with the \`tv-remote\` tool
 (Vega is remote-driven, not touch). If describe returns an empty tree on Vega, relaunch the foreground
-app (the toolkit attaches at launch) and try again.
+app (the toolkit attaches at launch) and try again.<flag:harmonyos>
 On HarmonyOS, runs the device's own \`uitest dumpLayout\` (\`source: "harmony-uitest"\`); each top-level
 child is a window carrying the owning bundle as its \`identifier\` (not its label, which would make a
 full-screen node match a text search for the app's own name), so an app plus the status bar reads as
 two windows. A suspended display still dumps its last-composited windows, indistinguishable in the
 tree from a live screen, so the result carries a \`hint\` saying the panel is off — taps land nowhere
 until you wake it with \`button\` (power). An empty dump is hinted the same way, as an app that may
-still be starting.
+still be starting.</flag:harmonyos>
 
 When a system dialog is visible, describe returns the dialog's interactive elements (buttons, text)
 with tap coordinates. When no dialog is present, it returns the foreground app's accessible elements.
@@ -199,7 +199,7 @@ since a TV UI has no tap coordinates. Move the highlight with \`tv-remote\` (up/
 back/menu/home), then call describe again to confirm where focus landed.`,
     alwaysLoad: true,
     searchHint:
-      "accessibility element tree ui hierarchy tap coordinates ios android chromium vega harmony harmonyos dom tv tvos apple tv android tv fire tv focus focusable remote dpad",
+      "accessibility element tree ui hierarchy tap coordinates ios android chromium vega <flag:harmonyos>harmony harmonyos </flag:harmonyos>dom tv tvos apple tv android tv fire tv focus focusable remote dpad",
     zodSchema,
     capability,
     services: (params): Record<string, ServiceRef> => {

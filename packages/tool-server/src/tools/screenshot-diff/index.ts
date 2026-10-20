@@ -46,7 +46,7 @@ const zodSchema = z
       .string()
       .min(1)
       .describe(
-        "Target device id from `list-devices` (iOS UDID, Android serial, or HarmonyOS id)."
+        "Target device id from `list-devices` (iOS UDID<flag:harmonyos>, HarmonyOS id,</flag:harmonyos> or Android serial)."
       ),
     captureBaseline: z.coerce
       .boolean()
@@ -64,7 +64,7 @@ const zodSchema = z
       .enum(["Portrait", "LandscapeLeft", "LandscapeRight", "PortraitUpsideDown"])
       .optional()
       .describe(
-        "Orientation override for live baseline/current captures. Rejected on HarmonyOS, which captures the display in its current orientation and has no override. Ignored on physical iPhones."
+        "Orientation override for live baseline/current captures. <flag:harmonyos>Rejected on HarmonyOS, which captures the display in its current orientation and has no override. </flag:harmonyos>Ignored on physical iPhones."
       ),
     outputDir: z
       .string()
@@ -118,15 +118,15 @@ export const screenshotDiffTool: ToolDefinition<Params, ScreenshotDiffResult> = 
     failedMsg: ({ failureSignal }) => `Failed to compare screenshots: ${failureSignal.error_code}`,
   },
   description: `Compare two PNG screenshots and return a compact visual-diff summary.
-Accepts saved baseline/current PNG paths, or one saved PNG plus one live full-resolution capture from a device (iOS, Android or HarmonyOS). Always provide udid so the capture backend can be resolved.
+Accepts saved baseline/current PNG paths, or one saved PNG plus one live full-resolution capture from a device<flag:harmonyos> (iOS, Android or HarmonyOS)</flag:harmonyos>. Always provide udid so the capture backend can be resolved.
 Use when stable before/after screenshots exist and the expected result is pixel-visible: layout, spacing, color, typography, image/icon rendering, clipping, overflow, or text rendering.
 For live captures, set exactly one of captureBaseline or captureCurrent; use baselinePath + captureCurrent for the common visual-regression flow.
 Physical iPhones: live captures are device-wide and need no registered app. Keep baselines per device model; different aspect ratios fail as a dimension mismatch.
 Returns { summary, diffPath, contextDiffPath }. The summary uses normalized [0,1] screen locations matching describe coordinates; diffPath is the full-size diff image and contextDiffPath is a downscaled image for MCP/agent display.
 Ignores the fixed top status-bar band for both pixel and OCR text comparisons.
-Fails if the input sources are invalid, PNG files cannot be read, outputDir cannot be written, or the simulator-server / emulator backend, or \`hdc\` on HarmonyOS, is not reachable.`,
+Fails if the input sources are invalid, PNG files cannot be read, outputDir cannot be written, or the simulator-server / emulator backend<flag:harmonyos>, or \`hdc\` on HarmonyOS,</flag:harmonyos> is not reachable.`,
   searchHint:
-    "compare screenshots png diff visual UI changes UI regression visual regression screenshot diff changed regions text ocr live capture harmony harmonyos",
+    "compare screenshots png diff visual UI changes UI regression visual regression screenshot diff changed regions text ocr live capture<flag:harmonyos> harmony harmonyos</flag:harmonyos>",
   zodSchema,
   capability,
   fileInputs,
