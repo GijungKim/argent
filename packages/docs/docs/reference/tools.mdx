@@ -79,6 +79,7 @@ Argent supports physical iPhones; physical iPads are not supported yet. `list-de
 | Tool                     | Description                                                     |
 | ------------------------ | --------------------------------------------------------------- |
 | `gesture-tap`            | Tap at normalized coordinates                                   |
+| `tap-element`            | Tap one live native element on a physical iPhone                |
 | `gesture-swipe`          | Smooth swipe or drag between two points                         |
 | `gesture-scroll`         | Scroll a Chromium app by dispatching mouse-wheel events         |
 | `gesture-drag`           | Press, move, and release the mouse in a Chromium app            |
@@ -91,6 +92,50 @@ Argent supports physical iPhones; physical iPads are not supported yet. `list-de
 | `run-sequence`           | Execute several interaction steps in a single call              |
 | `screen-recording-start` | Start recording the screen to an h264 mp4                       |
 | `screen-recording-stop`  | Stop the recording and retrieve the video                       |
+
+### Native element taps
+
+`tap-element` works on physical iPhones only.
+Use this tool when an embedded Apple view reports incorrect snapshot coordinates.
+The tool uses a live XCTest element query and a native element tap.
+The tool does not convert a snapshot frame into tap coordinates.
+
+The input contains `udid`, `selector`, and an optional `clickCount` from 1 to 10.
+The selector accepts these fields:
+
+| Field        | Match                                                           |
+| ------------ | --------------------------------------------------------------- |
+| `identifier` | Exact, case-sensitive accessibility identifier                  |
+| `label`      | Exact, case-sensitive accessibility label                       |
+| `role`       | Exact role from `describe`, such as `AXButton` or `AXTextField` |
+
+Supply `identifier` or `label`.
+All supplied fields must match the same element.
+The tool rejects empty selectors and selectors that contain only a role.
+The tool does not accept substring, regular-expression, or spatial matching.
+
+For example, after registering the app with `launch-app`:
+
+```sh
+argent run tap-element --args '{"udid":"<device-id>","selector":{"label":"Search","role":"AXTextField"}}'
+```
+
+The query must match exactly one element.
+Missing, ambiguous, disabled, and non-hittable targets fail without a coordinate fallback.
+Narrow an ambiguous selector before retrying.
+Do not retry an uncertain mutation until you inspect its effect.
+
+The tool returns `tapped: true` and `timestampMs` after a successful command.
+The tool also returns `reactivated: true` when it brings a background app forward.
+The tool does not launch a stopped app.
+Coordinate taps and other platforms keep the existing `gesture-tap` behavior.
+
+On physical iOS, strict e2e tap selectors with only an unscoped identifier use native element taps.
+The flow resolves the identifier's actual case before the native query.
+Role-qualified, text, regular-expression, loose, and spatially scoped selectors keep the existing coordinate path.
+Use a `tool: tap-element` step for an exact native label query.
+Native lookup or action failures do not fall back to coordinates.
+Snapshot positions in `describe` remain unchanged.
 
 ## JavaScript runtime debugging
 

@@ -11,6 +11,7 @@ import { isBlindRead } from "../describe/blind-read";
 import { nativeDirection, uiPointToNative, uiVectorToNative } from "./flow-orientation";
 import {
   selectorToFrame,
+  selectorToNode,
   findAll,
   evaluateCondition,
   firstInReadingOrder,
@@ -440,6 +441,19 @@ function flowSelectorToFrame(
   return undefined;
 }
 
+/** Identifier-first-then-text node resolution with the same ranking as frame actions. */
+function flowSelectorToNode(
+  tree: DescribeNode,
+  sel: FlowSelector,
+  orientation: UiOrientation | undefined
+): DescribeNode | undefined {
+  for (const s of selectorAlternatives(sel)) {
+    const node = selectorToNode(tree, s, orientation);
+    if (node) return node;
+  }
+  return undefined;
+}
+
 /**
  * How the UI lies on the frame space of the tree a selector is about to
  * resolve against, for the relations and picks that go by reading order: the
@@ -617,6 +631,31 @@ export async function waitForFrame(
   const frames = await waitForFrames(env, [selector]);
   if (frames === "aborted") return "aborted";
   return Array.isArray(frames) ? frames[0] : undefined;
+}
+
+/**
+ * Single-selector counterpart to {@link waitForFrame} that retains the node's
+ * actual accessibility fields. Native element actions need those fields rather
+ * than the flow selector's case-insensitive/fuzzy spelling.
+ */
+async function waitForNode(
+  env: ActionEnv,
+  selector: FlowSelector
+): Promise<{ node: DescribeNode; tree: DescribeNode } | "aborted" | undefined> {
+  const deadline = Date.now() + DEFAULT_ACTION_TIMEOUT_MS;
+  for (;;) {
+    if (env.signal?.aborted) return "aborted";
+    const tree = await settleTree(env);
+    if (tree) {
+      const node = flowSelectorToNode(tree, selector, readingOrientation(env));
+      if (node) return { node, tree };
+    } else if (env.signal?.aborted) {
+      return "aborted";
+    }
+    if (Date.now() >= deadline) return undefined;
+    const sleepMs = Math.min(POLL_INTERVAL_MS, Math.max(0, deadline - Date.now()));
+    if (!(await sleepOrAbort(sleepMs, env.signal))) return "aborted";
+  }
 }
 
 function framesOverlap(a: DescribeFrame, b: DescribeFrame): boolean {
@@ -1084,16 +1123,90 @@ function targetPointFromFrame(
 }
 
 /**
- * Tap a resolved target point. `times` rides the gesture-tap tool's
- * `clickCount`: one dispatched multi-tap gesture, never N separate calls, whose
- * RPC gaps could fall outside the OS double-tap window.
+ * The deliberately narrow flow selector subset that can preserve its meaning
+ * as an exact native element query. Anything fuzzy or relational stays on the
+ * established coordinate path: translating it directly would silently drop
+ * semantics that only the settled flow tree can evaluate.
+ */
+function supportsNativeElementTap(selector: FlowSelector): boolean {
+  return (
+    selector.identifier !== undefined &&
+    selector.text === undefined &&
+    selector.textMatches === undefined &&
+    selector.role === undefined &&
+    selector.loose !== true &&
+    selector.any !== true &&
+    SELECTOR_RELATIONS.every((relation) => selector[relation] === undefined)
+  );
+}
+
+interface ExactNativeTapSelector {
+  identifier: string;
+}
+
+/** Preserve the resolved node's actual identifier casing for the exact live query. */
+function exactNativeTapSelector(node: DescribeNode): ExactNativeTapSelector | undefined {
+  if (!node.identifier) return undefined;
+  return { identifier: node.identifier };
+}
+
+/**
+ * Tap a semantic target. On physical iOS, a strict unscoped identifier selector
+ * whose original match is unique uses the runner's live XCUIElement
+ * action. Unsupported selector forms preserve the coordinate behavior; a
+ * supported selector that is unavailable or ambiguous fails without mutation.
+ * `times` is still one dispatched multi-tap action, never N host-side calls.
  */
 async function runTap(
   env: ActionEnv,
   target: { selector?: FlowSelector; x?: number; y?: number; times?: number }
 ): Promise<DirectiveOutcome> {
+  if (
+    isIosPhysicalDevice(env.device) &&
+    target.selector !== undefined &&
+    supportsNativeElementTap(target.selector)
+  ) {
+    const resolved = await waitForNode(env, target.selector);
+    if (resolved === "aborted") return ABORTED_OUTCOME;
+    if (!resolved) {
+      return { ok: false, reason: offscreenHint(target.selector) };
+    }
+    // Reject duplicate ORIGINAL selector matches visible in the settled tree.
+    // The snapshot may prune other live elements, so the runner remains the
+    // authoritative count: send only the resolved actual identifier, never a
+    // label/role that could silently narrow a duplicate id out of its query.
+    const matches = flowFindAll(resolved.tree, target.selector, readingOrientation(env));
+    if (matches.length !== 1) {
+      return {
+        ok: false,
+        reason:
+          `Native element tap selector matched ${matches.length} elements. ` +
+          "Make its identifier unique, or use explicit x/y coordinates.",
+      };
+    }
+    const selector = exactNativeTapSelector(resolved.node);
+    if (!selector) {
+      return {
+        ok: false,
+        reason:
+          "Native element tap could not derive an exact accessibility identity. " +
+          "Give the element a non-empty identifier, or use explicit x/y coordinates.",
+      };
+    }
+
+    // Cancellation must win up to the dispatch boundary. Once this native
+    // action starts, any error propagates; there is no coordinate retry.
+    if (env.signal?.aborted) return ABORTED_OUTCOME;
+    const sent = await invokeOnDevice(env, "tap-element", {
+      selector,
+      ...(target.times !== undefined ? { clickCount: target.times } : {}),
+    });
+    return { ok: true, ...warnedBy(toolWarning(sent)) };
+  }
+
   const resolved = await resolveTargetPoint(env, target);
   if ("fail" in resolved) return resolved.fail;
+  if (env.signal?.aborted) return ABORTED_OUTCOME;
   const sent = await invokeOnDevice(env, "gesture-tap", {
     ...resolved.point,
     ...(target.times !== undefined ? { clickCount: target.times } : {}),

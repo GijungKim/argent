@@ -52,20 +52,21 @@ set, so clean replies stay byte-identical on the wire.
 
 ## Request fields
 
-| Field                 | Used by             | Meaning                                                                 |
-| --------------------- | ------------------- | ----------------------------------------------------------------------- |
-| `command`             | all                 | Command name (below).                                                   |
-| `commandId`           | all but `status`    | Client-stamped id for send-once tracking.                               |
-| `statusCommandId`     | `status`            | Journal lookup key.                                                     |
-| `appBundleId`         | app-scoped commands | Target app. Required, never inferred.                                   |
-| `x`, `y`              | `tap`, `longPress`  | Absolute points in the app's space.                                     |
-| `numberOfTaps`        | `tap`               | 1 (default), 2 (native double-tap), or more (separate taps, see below). |
-| `fromX/fromY/toX/toY` | `drag`              | Absolute start/end points.                                              |
-| `durationMs`          | `longPress`, `drag` | Press duration / movement duration.                                     |
-| `holdMs`              | `drag`              | Rest at the start point before moving (default 50 ms).                  |
-| `settle`              | `drag`              | Rest at the destination before lifting (~0 release velocity, no fling). |
-| `text`                | `type`              | Text for the focused input.                                             |
-| `button`              | `button`            | `home`, `volumeUp`, `volumeDown` or `actionButton`.                     |
+| Field                 | Used by             | Meaning                                                                            |
+| --------------------- | ------------------- | ---------------------------------------------------------------------------------- |
+| `command`             | all                 | Command name (below).                                                              |
+| `commandId`           | all but `status`    | Client-stamped id for send-once tracking.                                          |
+| `statusCommandId`     | `status`            | Journal lookup key.                                                                |
+| `appBundleId`         | app-scoped commands | Target app. Required, never inferred.                                              |
+| `x`, `y`              | `tap`, `longPress`  | Absolute points in the app's space.                                                |
+| `selector`            | `tapElement`        | Exact non-empty `{identifier?, label?, role?}`; identifier or label required.      |
+| `numberOfTaps`        | `tap`, `tapElement` | 1 (default), 2 (native double-tap), or separate taps above 2; `tapElement` max 10. |
+| `fromX/fromY/toX/toY` | `drag`              | Absolute start/end points.                                                         |
+| `durationMs`          | `longPress`, `drag` | Press duration / movement duration.                                                |
+| `holdMs`              | `drag`              | Rest at the start point before moving (default 50 ms).                             |
+| `settle`              | `drag`              | Rest at the destination before lifting (~0 release velocity, no fling).            |
+| `text`                | `type`              | Text for the focused input.                                                        |
+| `button`              | `button`            | `home`, `volumeUp`, `volumeDown` or `actionButton`.                                |
 
 ## Commands
 
@@ -92,6 +93,27 @@ launch, and launching is launch-app's job, never a command side effect):
   `durationMs` implies, and rests `settle`-long before lifting; a long-press
   pickup of a draggable item needs a `holdMs` of about 500 ms or more, since
   a short press never lifts it however slowly the finger then moves.
+- `tapElement` → `{message}`: resolves a live XCTest element from
+  `app.descendants(matching: .any)` and taps the element directly. Every
+  supplied constraint, including the element types allowed by `role`, is part
+  of the native XCTest predicate. The runner requires `query.count == 1` and
+  acts through that unique query's `element`; it never retains or taps a bulk
+  result's index. `identifier`
+  and `label` are non-empty exact, case-sensitive matches (no substring,
+  regular expression, or geometry fallback), and at least one is required;
+  `role` alone is invalid. Every supplied field must be non-empty. `role`, when
+  supplied, is also exact and uses describe's
+  role names: Button/CheckBox/MenuItem/Cell are `AXButton`;
+  TextField/SecureTextField/SearchField/TextView are `AXTextField`; the other
+  mapped roles are StaticText → `AXStaticText`, Image → `AXImage`, Link →
+  `AXLink`, TabBar → `AXTabBar`, and Switch/Toggle/Slider/Stepper/DatePicker/
+  Picker/PickerWheel → `AXAdjustable`; otherwise the runner type name is used.
+  The complete selector must match exactly one element before any gesture
+  occurs. Zero matches return
+  `ELEMENT_NOT_FOUND`, multiple matches `ELEMENT_AMBIGUOUS`, and a unique
+  disabled or non-hittable match `ELEMENT_NOT_INTERACTABLE`. There is no
+  first-match or coordinate fallback. Tap counts accept 1–10: 1 is a native
+  tap, 2 a native double-tap, and 3–10 are separate synthesized taps.
 - `type` → `{message}`: types into the current first responder. The runner
   probes keyboard focus first and answers `TEXT_INPUT_NOT_FOCUSED` when
   nothing has it. The probe is what makes that code real on hardware: there,
@@ -201,6 +223,7 @@ reasonCode?}`.
 `INVALID_REQUEST`, `APP_BUNDLE_ID_REQUIRED`, `APP_NOT_AVAILABLE`,
 `APP_BACKGROUNDED` (`snapshot` only: the target is alive but backgrounded, and
 observation never re-fronts it), `TEXT_INPUT_NOT_FOCUSED`,
+`ELEMENT_NOT_FOUND`, `ELEMENT_AMBIGUOUS`, `ELEMENT_NOT_INTERACTABLE`,
 `UNSUPPORTED_OPERATION` (hardware or an API the device lacks: an absent
 button), `RUNNER_BUSY` (the one
 retryable code), `RUNNER_WEDGED` (recycle the session),
@@ -215,12 +238,12 @@ under a larger transport window (default `RUNNER_COMMAND_TIMEOUT_MS`,
 runner-client.ts; overrides in runner-commands.ts: `GESTURE_TIMEOUT_MS` and
 the `type`/`snapshot` call sites).
 
-| Command class              | Runner budget | Client window |
-| -------------------------- | ------------- | ------------- |
-| `type`                     | 55s           | 60s           |
-| `tap`, `longPress`, `drag` | 75s           | 90s           |
-| `snapshot`                 | 30s           | 45s           |
-| everything else (default)  | 30s           | 45s           |
+| Command class                            | Runner budget | Client window |
+| ---------------------------------------- | ------------- | ------------- |
+| `type`                                   | 55s           | 60s           |
+| `tap`, `tapElement`, `longPress`, `drag` | 75s           | 90s           |
+| `snapshot`                               | 30s           | 45s           |
+| everything else (default)                | 30s           | 45s           |
 
 The invariant: every client window MUST strictly exceed the matching runner
 budget, so the client outlasts the runner's verdict. A command that blows

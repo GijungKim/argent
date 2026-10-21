@@ -1,0 +1,18 @@
+[
+  {
+    "keyboardAfterNativeTap": true,
+    "keyboardAfterSnapshotCenter": false,
+    "liveSearchAfterY": 503,
+    "liveSearchBeforeY": 752,
+    "presentationMode": "embedded",
+    "snapshotSearchY": 571
+  },
+  {
+    "keyboardAfterNativeTap": true,
+    "keyboardAfterSnapshotCenter": false,
+    "liveSearchAfterY": 503,
+    "liveSearchBeforeY": 752,
+    "presentationMode": "fullScreen",
+    "snapshotSearchY": 587
+  }
+]
