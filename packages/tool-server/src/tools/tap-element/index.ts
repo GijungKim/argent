@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { ServiceRef, ToolCapability, ToolDefinition } from "@argent/registry";
 import { iosDeviceRunnerRef, type IosDeviceRunnerApi } from "../../blueprints/ios-device-runner";
 import { requireCurrentIosDeviceApp } from "../../utils/ios-device/app-session";
-import { tapElement, type RunnerElementSelector } from "../../utils/ios-device/runner-commands";
+import { tapElement } from "../../utils/ios-device/runner-commands";
 import { RunnerCommandError } from "../../utils/ios-device/runner-client";
 import { assertSupported } from "../../utils/capability";
 import { isIosPhysicalDevice, resolveDevice } from "../../utils/device-info";
@@ -43,13 +43,17 @@ const selectorSchema = z
       .optional()
       .describe("Exact, case-sensitive accessibility label from `describe`."),
     role: z
-      .string()
-      .min(1)
+      .enum([
+        "AXButton",
+        "AXStaticText",
+        "AXImage",
+        "AXLink",
+        "AXTextField",
+        "AXTabBar",
+        "AXAdjustable",
+      ])
       .optional()
-      .describe(
-        "Exact, case-sensitive role from `describe` (for example AXButton or AXTextField). " +
-          "The runner maps that describe role back to its XCUI element type."
-      ),
+      .describe("Optional native type filter using one of the supported AX roles from `describe`."),
   })
   .strict()
   .refine((selector) => selector.identifier !== undefined || selector.label !== undefined, {
@@ -62,16 +66,6 @@ export const tapElementSchema = z
     selector: selectorSchema.describe(
       "Exact live-element selector. Every supplied field is ANDed and matched case-sensitively."
     ),
-    clickCount: z
-      .number()
-      .int()
-      .min(1)
-      .max(10)
-      .optional()
-      .describe(
-        "Number of taps sent as one native action (2 uses XCUIElement.doubleTap; above 2 uses " +
-          "separate live-element taps on-device). Default 1."
-      ),
   })
   .strict();
 
@@ -103,7 +97,7 @@ export const tapElementTool: ToolDefinition<Params, Result> = {
   },
   description: `Tap a live accessibility element on a physical iPhone through XCUIElement, without converting a snapshot frame to coordinates.
 Every supplied selector field is an exact, case-sensitive AND constraint. Pass at least identifier or label; role alone is rejected. Use role values exactly as \`describe\` emits them (for example \`AXTextField\`); role is the describe-to-XCUI type mapping, not a fuzzy substring.
-Use this when coordinate taps are unreliable, including controls such as picker search fields: \`{ label: "Search", role: "AXTextField" }\`. Set clickCount: 2 for native doubleTap. The runner rejects zero matches (ELEMENT_NOT_FOUND), multiple matches (ELEMENT_AMBIGUOUS), and a matched element that cannot be tapped (ELEMENT_NOT_INTERACTABLE).
+Use this for a single tap when coordinate taps are unreliable, including picker search fields: \`{ label: "Search", role: "AXTextField" }\`. The runner rejects zero matches (ELEMENT_NOT_FOUND), multiple matches (ELEMENT_AMBIGUOUS), and a matched element that cannot be tapped (ELEMENT_NOT_INTERACTABLE).
 Physical iOS only. There is no coordinate fallback or retry after native lookup/action failure. Returns { tapped: true, timestampMs }; reactivated: true means the target app was re-fronted, so re-describe the screen first.`,
   searchHint:
     "physical iphone ios tap live native accessibility element selector identifier label role xcui",
@@ -119,12 +113,9 @@ Physical iOS only. There is no coordinate fallback or retry after native lookup/
     const runner = services.iosDeviceRunner as IosDeviceRunnerApi;
     const bundleId = requireCurrentIosDeviceApp(device.id);
     const timestampMs = Date.now();
-    const result = await tapElement(
-      runner,
-      bundleId,
-      params.selector as RunnerElementSelector,
-      params.clickCount
-    ).catch(surfaceElementTapFailureCode);
+    const result = await tapElement(runner, bundleId, params.selector).catch(
+      surfaceElementTapFailureCode
+    );
     return {
       tapped: true,
       timestampMs,

@@ -16,7 +16,6 @@ describe("tap-element schema", () => {
       tapElementSchema.safeParse({
         udid: DEVICE,
         selector: { identifier: "PickerSearch", role: "AXTextField" },
-        clickCount: 10,
       }).success
     ).toBe(true);
     expect(
@@ -27,11 +26,12 @@ describe("tap-element schema", () => {
       { udid: DEVICE, selector: { role: "AXTextField" } },
       { udid: DEVICE, selector: {} },
       { udid: DEVICE, selector: { label: "" } },
+      { udid: DEVICE, selector: { label: "Search", role: "SearchField" } },
+      { udid: DEVICE, selector: { label: "Search", role: "axtextfield" } },
       { udid: DEVICE, selector: { text: "Search" } },
       { udid: DEVICE, selector: { label: "Search", extra: true } },
       { udid: DEVICE, selector: { label: "Search" }, clickCount: 0 },
-      { udid: DEVICE, selector: { label: "Search" }, clickCount: 11 },
-      { udid: DEVICE, selector: { label: "Search" }, clickCount: 1.5 },
+      { udid: DEVICE, selector: { label: "Search" }, clickCount: 2 },
       { udid: DEVICE, selector: { label: "Search" }, extra: true },
     ]) {
       expect(tapElementSchema.safeParse(params).success, JSON.stringify(params)).toBe(false);
@@ -60,12 +60,15 @@ describe("tap-element execution", () => {
   it("sends one mutation using the selector verbatim and surfaces reactivation", async () => {
     const run = vi.fn().mockResolvedValue({ reactivated: true });
     const services = { iosDeviceRunner: { udid: DEVICE, run } } as never;
-    const selector = { identifier: "PickerSearch", label: "Search", role: "AXTextField" };
+    const selector = tapElementSchema.shape.selector.parse({
+      identifier: "PickerSearch",
+      label: "Search",
+      role: "AXTextField",
+    });
 
     const result = await tapElementTool.execute(services, {
       udid: DEVICE,
       selector,
-      clickCount: 2,
     });
 
     expect(result).toMatchObject({ tapped: true, reactivated: true });
@@ -74,7 +77,6 @@ describe("tap-element execution", () => {
       command: "tapElement",
       appBundleId: "com.example.app",
       selector,
-      numberOfTaps: 2,
     });
     expect(run.mock.calls[0][1]).toEqual({ timeoutMs: 90_000 });
   });

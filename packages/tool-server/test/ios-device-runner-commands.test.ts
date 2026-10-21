@@ -87,19 +87,17 @@ describe("tapElement wire shape", () => {
     const run = vi.fn().mockResolvedValue({});
     const api: IosDeviceRunnerApi = { udid: "00008110-000978540290401E", run };
 
-    await tapElement(
-      api,
-      "com.example.app",
-      { identifier: "SearchField", label: "Search", role: "AXTextField" },
-      2
-    );
+    await tapElement(api, "com.example.app", {
+      identifier: "SearchField",
+      label: "Search",
+      role: "AXTextField",
+    });
 
     expect(run).toHaveBeenCalledWith(
       {
         command: "tapElement",
         appBundleId: "com.example.app",
         selector: { identifier: "SearchField", label: "Search", role: "AXTextField" },
-        numberOfTaps: 2,
       },
       { timeoutMs: 90_000 }
     );
@@ -115,7 +113,7 @@ describe("tapElement wire shape", () => {
     const run = vi.fn().mockRejectedValue(failure);
     const api: IosDeviceRunnerApi = { udid: "00008110-000978540290401E", run };
 
-    const caught = await tapElement(api, "com.example.app", { label: "Search" }, 1).catch(
+    const caught = await tapElement(api, "com.example.app", { label: "Search" }).catch(
       (error: unknown) => error
     );
 

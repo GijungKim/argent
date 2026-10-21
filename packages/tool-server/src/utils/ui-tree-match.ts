@@ -698,7 +698,7 @@ function exactFieldCount(
 }
 
 /**
- * The selector's best visible matching node — whose frame a `tap`/`type`
+ * The on-screen frame of a selector's best visible match — what a `tap`/`type`
  * action targets. An accessible container (e.g. a Touchable on iOS) aggregates
  * its descendants' labels, so a substring text selector matches the container
  * as well as the leaf carrying the text, and the container's centre can sit
@@ -719,13 +719,14 @@ function exactFieldCount(
  *
  * Reading order, here and in the relations `findAll` resolves, is the UI's
  * when `orientation` says how the UI lies on the frame space (see the module
- * comment). The node's frame stays in the frame space: the one to act on.
+ * comment). The frame returned is the node's own, in the frame space: the one
+ * to act on.
  */
-export function selectorToNode(
+export function selectorToFrame(
   root: DescribeNode,
   selector: Selector,
   orientation?: UiOrientation
-): DescribeNode | undefined {
+): DescribeFrame | undefined {
   const visible = findAll(root, selector, orientation).filter(isVisible);
   if (visible.length === 0) return undefined;
   const reading = readingFrames(orientation);
@@ -734,7 +735,7 @@ export function selectorToNode(
     for (const n of visible) {
       if (first === undefined || compareBelowPick(reading(n), reading(first)) < 0) first = n;
     }
-    return first;
+    return first?.frame;
   }
   const fullTextRegex = fullConsumptionRegex(selector);
   let best: DescribeNode | undefined;
@@ -755,16 +756,7 @@ export function selectorToNode(
       best = n;
     }
   }
-  return best;
-}
-
-/** The frame half of {@link selectorToNode}, kept as the action-facing API. */
-export function selectorToFrame(
-  root: DescribeNode,
-  selector: Selector,
-  orientation?: UiOrientation
-): DescribeFrame | undefined {
-  return selectorToNode(root, selector, orientation)?.frame;
+  return best?.frame;
 }
 
 const GENERIC_ROLES = new Set([

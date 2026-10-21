@@ -58,13 +58,11 @@ A web URL opens in Safari, not in the app that owns the link. The agent names th
 
 ### Taps in embedded system views
 
-Some Apple pickers report positions relative to an embedded view instead of the screen.
-A coordinate tap can then reach a different control.
-The agent can use a native element tap on a physical iPhone instead.
+Some embedded Apple views report incorrect snapshot positions.
+The agent can use a native element tap instead of a coordinate tap.
 Argent finds the live element and asks XCTest to tap it directly.
-Argent refuses the tap when the element is missing, ambiguous, or not interactable.
 
-See [Native element taps](/docs/reference/tools#native-element-taps) for the exact matching rules and limits.
+See [Native element taps](/docs/reference/tools#native-element-taps) for matching rules and limits.
 
 ## Limits
 

@@ -20,22 +20,15 @@ const SWIFT_SNAPSHOT_SOURCE = path.resolve(
 );
 
 const swiftSource = readFileSync(SWIFT_SNAPSHOT_SOURCE, "utf8");
-const swiftElementSource = readFileSync(
-  path.resolve(
-    __dirname,
-    "../../ios-device-runner/ArgentRunner/ArgentRunnerUITests/NativeElementTap.swift"
-  ),
-  "utf8"
-);
 
 /**
- * `(.button, "Button")` pairs from the shared Swift type-name list:
- * the authoritative member-name to wire-name mapping, so the list
+ * `case .button: return "Button"` pairs from the Swift `elementTypeName`
+ * switch: the authoritative member-name to wire-name mapping, so the list
  * extraction below never guesses at capitalization.
  */
 function extractElementTypeNames(source: string): Map<string, string> {
   const map = new Map<string, string>();
-  for (const match of source.matchAll(/\(\.(\w+),\s*"(\w+)"\)/g)) {
+  for (const match of source.matchAll(/case\s+\.(\w+)\s*:\s*return\s+"(\w+)"/g)) {
     map.set(match[1], match[2]);
   }
   return map;
@@ -53,12 +46,12 @@ function extractSwiftTypeList(source: string, name: string): string[] {
     `Swift list '${name}' parsed empty; the extraction regex rotted`
   ).toBeGreaterThan(0);
 
-  const typeNames = extractElementTypeNames(swiftElementSource);
+  const typeNames = extractElementTypeNames(source);
   return members.map((member) => {
     const typeName = typeNames.get(member);
     expect(
       typeName,
-      `Swift list '${name}' member '.${member}' has no entry in the shared type-name list; ` +
+      `Swift list '${name}' member '.${member}' has no case in elementTypeName; ` +
         "the wire name for it is unknown"
     ).toBeDefined();
     return typeName!;
@@ -94,19 +87,6 @@ const LABELED_ONLY_ROLE_KEYS: Record<string, string> = {
 };
 
 describe("ios-device Swift lockstep", () => {
-  it("native semantic roles match the TypeScript describe roles exactly", () => {
-    const names = extractElementTypeNames(swiftElementSource);
-    const roles: Record<string, string> = {};
-    for (const match of swiftElementSource.matchAll(/case\s+([.\w,\s]+):\s*return\s+"(AX\w+)"/g)) {
-      for (const member of match[1].matchAll(/\.(\w+)/g)) {
-        const name = names.get(member[1]);
-        expect(name, `Native role member .${member[1]} has no shared type name`).toBeDefined();
-        roles[name!] = match[2];
-      }
-    }
-    expect(roles).toEqual(RUNNER_TYPE_TO_ROLE);
-  });
-
   it("SCROLL_CONTAINER_TYPES equals the Swift scrollContainerTypes exactly", () => {
     expect([...SCROLL_CONTAINER_TYPES].sort()).toEqual([...swiftScroll].sort());
   });

@@ -3,7 +3,6 @@ import type { DescribeNode } from "../../src/tools/describe/contract";
 import {
   nodeAtPoint,
   selectorToFrame,
-  selectorToNode,
   deriveSelector,
   evaluateCondition,
   findAll,
@@ -59,16 +58,6 @@ describe("ui-tree-match", () => {
   it("selectorToFrame resolves the first visible match", () => {
     const frame = selectorToFrame(root, { text: "Welcome" });
     expect(frame).toMatchObject({ x: 0.1, y: 0.3 });
-  });
-
-  it("selectorToNode preserves the selected element's accessibility fields", () => {
-    const selected = selectorToNode(root, { identifier: "LOGIN-BTN" });
-    expect(selected).toMatchObject({
-      identifier: "login-btn",
-      label: "Login",
-      role: "AXButton",
-      frame: selectorToFrame(root, { identifier: "LOGIN-BTN" }),
-    });
   });
 
   // iOS flattens an accessible container's descendants into its own label

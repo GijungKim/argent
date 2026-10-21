@@ -155,15 +155,13 @@ export async function tapAt(
 export async function tapElement(
   api: IosDeviceRunnerApi,
   bundleId: string,
-  selector: RunnerElementSelector,
-  numberOfTaps?: number
+  selector: RunnerElementSelector
 ): Promise<MutationReply> {
   const data = await api.run(
     {
       command: "tapElement",
       appBundleId: bundleId,
       selector,
-      ...(numberOfTaps != null && numberOfTaps > 1 ? { numberOfTaps } : {}),
     },
     { timeoutMs: GESTURE_TIMEOUT_MS }
   );

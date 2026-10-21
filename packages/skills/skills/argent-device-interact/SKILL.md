@@ -48,30 +48,29 @@ Common schemes: `messages://`, `settings://`, `maps://?q=<query>`, `tel://<numbe
 
 ## 4. Choosing the Right Tool
 
-| Action             | Tool                | Notes                                                             |
-| ------------------ | ------------------- | ----------------------------------------------------------------- |
-| Multiple actions   | `run-sequence`      | Batch steps in one call (no intermediate screenshots)             |
-| Open an app        | `launch-app`        | **Always: never tap home-screen icons**                           |
-| Restart an app     | `restart-app`       | Terminate and relaunch by bundle ID                               |
-| Open URL/scheme    | `open-url`          | Web pages, deep links, URL schemes                                |
-| Native element tap | `tap-element`       | Physical iPhone only; exact live identifier/label selector        |
-| Point tap          | `gesture-tap`       | Normalized coordinates on touch devices and Chromium              |
-| Scroll/swipe       | `gesture-swipe`     | Straight-line scroll or swipe                                     |
-| Scroll (Chromium)  | `gesture-scroll`    | Wheel-based; deltas are window fractions, positive deltaY = down  |
-| Drag (Chromium)    | `gesture-drag`      | Sliders, drag-and-drop, text selection                            |
-| Long press         | `gesture-custom`    | Context menus, drag start                                         |
-| Drag & drop        | `gesture-custom`    | Complex drag interactions                                         |
-| Pinch/zoom         | `gesture-pinch`     | Two-finger pinch with auto-interpolation                          |
-| Rotation           | `gesture-rotate`    | Two-finger rotation with auto-interpolation                       |
-| Custom gesture     | `gesture-custom`    | Arbitrary touch sequences, optional interpolation                 |
-| Hardware key       | `button`            | Home, back, power, volume, appSwitch, actionButton                |
-| Type text          | `keyboard`          | Every platform. Text or one named key per call, never both        |
-| Paste text         | `paste`             | Only where a user would paste (OTP code, long link). Sim/emu only |
-| Rotate device      | `rotate`            | Orientation changes                                               |
-| Fold device        | `fold`              | Foldable simulator/emulator: closed / half-open / open, or angle  |
-| Shake device       | `shake`             | Shake handlers (sim/emu only), Undo-typing prompt, RN dev menu    |
-| Wait for UI        | `await-ui-element`  | Block until an element is visible/hidden/exists/contains text     |
-| Wait for idle      | `await-screen-idle` | Block until a non-empty screen tree stops changing                |
+| Action            | Tool                | Notes                                                             |
+| ----------------- | ------------------- | ----------------------------------------------------------------- |
+| Multiple actions  | `run-sequence`      | Batch steps in one call (no intermediate screenshots)             |
+| Open an app       | `launch-app`        | **Always: never tap home-screen icons**                           |
+| Restart an app    | `restart-app`       | Terminate and relaunch by bundle ID                               |
+| Open URL/scheme   | `open-url`          | Web pages, deep links, URL schemes                                |
+| Single tap        | `gesture-tap`       | Buttons, links, checkboxes                                        |
+| Scroll/swipe      | `gesture-swipe`     | Straight-line scroll or swipe                                     |
+| Scroll (Chromium) | `gesture-scroll`    | Wheel-based; deltas are window fractions, positive deltaY = down  |
+| Drag (Chromium)   | `gesture-drag`      | Sliders, drag-and-drop, text selection                            |
+| Long press        | `gesture-custom`    | Context menus, drag start                                         |
+| Drag & drop       | `gesture-custom`    | Complex drag interactions                                         |
+| Pinch/zoom        | `gesture-pinch`     | Two-finger pinch with auto-interpolation                          |
+| Rotation          | `gesture-rotate`    | Two-finger rotation with auto-interpolation                       |
+| Custom gesture    | `gesture-custom`    | Arbitrary touch sequences, optional interpolation                 |
+| Hardware key      | `button`            | Home, back, power, volume, appSwitch, actionButton                |
+| Type text         | `keyboard`          | Every platform. Text or one named key per call, never both        |
+| Paste text        | `paste`             | Only where a user would paste (OTP code, long link). Sim/emu only |
+| Rotate device     | `rotate`            | Orientation changes                                               |
+| Fold device       | `fold`              | Foldable simulator/emulator: closed / half-open / open, or angle  |
+| Shake device      | `shake`             | Shake handlers (sim/emu only), Undo-typing prompt, RN dev menu    |
+| Wait for UI       | `await-ui-element`  | Block until an element is visible/hidden/exists/contains text     |
+| Wait for idle     | `await-screen-idle` | Block until a non-empty screen tree stops changing                |
 
 ## 5. Finding Tap Targets
 
@@ -116,19 +115,6 @@ Read the exact error and choose the action that matches it:
 Coordinates: `0.0` = left/top, `1.0` = right/bottom.
 
 Before tapping near the bottom of the screen in React Native apps, check that "Open Debugger to View Warnings" banners are not visible: tapping them breaks the debugger connection. Close them with the X icon if present.
-
-### tap-element: Live native element tap (physical iPhone only)
-
-```json
-{
-  "udid": "<PHYSICAL_IOS_UDID>",
-  "selector": { "label": "Search", "role": "AXTextField" }
-}
-```
-
-Copy fields from `describe`. Every supplied field is matched exactly and case-sensitively, and `identifier` or `label` is required (`role` alone is rejected). The runner fails on no match, multiple matches, or a non-interactable match; it never converts the element to snapshot coordinates or retries with `gesture-tap`. Optional `clickCount` is 1–10; `2` uses the native double-tap action. This tool is not available inside `run-sequence`.
-
-On a physical iPhone, flow replay auto-routes only a strict, unscoped `tap: { id: ... }` with no role or other selector field to this native action. It sends the resolved actual identifier with its exact casing; role-qualified, text, loose, regex, `any`, and relational flow selectors retain coordinate replay.
 
 ### gesture-swipe: Straight-line gesture
 
